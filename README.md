@@ -70,15 +70,15 @@ Use Vagrant to build a ubuntu-focal image and follow the instructions for Ubuntu
 
 You can simulate a radio interferometric dataset using the following command 
 
-        generate_dataset simulate --ndata 10 --telescope vla --frequency 3.0e8 --npixel 128 --add_noise True --snr 20 --out /path/to/dataset/dataset_name
+       $ generate_dataset simulate --ndata 10 --telescope vla --frequency 3.0e8 --npixel 128 --add_noise True --snr 20 --out /path/to/dataset/dataset_name
 
 ### Make an image
 
 ROBII can create an image from a zarr file using the robii fromzarr command. Here's an example:
 
-        robii fromzarr data.zarr -n 3 --out images --niter 10 --threshold 0.001 --dof 10
+        $ robii fromzarr data.zarr -n 3 --out images --niter 10 --threshold 0.001 --dof 10
 
-        
+
 
 
 
