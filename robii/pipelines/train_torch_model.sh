@@ -1,16 +1,13 @@
 #!/bin/bash
 
 
-output_path=/Users/ymhiri/Documents/Dev/unrolled-robust-imaging/robii/outputs/test
-dataset_config_file=/Users/ymhiri/Documents/Dev/unrolled-robust-imaging/robii/data/datasets/test.yaml
-mspath=/Users/ymhiri/Documents/Dev/unrolled-robust-imaging/robii/data/ms
+output_path=/synced/robii/robii/outputs/test
 
 cd $output_path
 
 mkdir datasets
 datasets_path=$output_path/datasets
 
-cp $dataset_config_file $datasets_path/config.yaml
 
 mkdir test_output
 mkdir test_output/images
@@ -20,9 +17,22 @@ mkdir log
 
 
 
-# Generate the datasets from a yaml config file
-generate_dataset fromyaml $datasets_path/config.yaml $datasets_path/train
-generate_dataset fromyaml $datasets_path/config.yaml $datasets_path/test
+# Generate train datasets 
+generate_dataset simulate --ndata 1000 \
+--telescope random_static \
+--npixel 64 \
+--out $datasets_path/train \
+--freq 3.0e8 \
+--add_noise \
+--snr 20 \
+--add_compound \
+--texture_distributions invgamma \
+--dof_ranges 3 10 \
+--texture_distributions gamma \
+--dof_ranges .1 5 \
+--texture_distributions invgauss \
+--dof_ranges .5 1
+
 
 # train the model
 train_model --dset_path $datasets_path/train.zip \
@@ -35,6 +45,23 @@ train_model --dset_path $datasets_path/train.zip \
 --model_name robiinet \
 --logpath $output_path/log/log.out \
 --true_init True
+
+# generate test dataset
+
+generate_dataset simulate --ndata 1000 \
+--telescope random_static \
+--npixel 64 \
+--out $datasets_path/test \
+--freq 3.0e8 \
+--add_noise \
+--snr 20 \
+--add_compound \
+--texture_distributions invgamma \
+--dof_ranges 3 10 \
+--texture_distributions gamma \
+--dof_ranges .1 5 \
+--texture_distributions invgauss \
+--dof_ranges .5 1
 
 
 
@@ -63,6 +90,9 @@ test_model --dset_path $datasets_path/test.zip \
 
 
 # maker image from real data
+
+# mspath=/Users/ymhiri/Documents/Dev/unrolled-robust-imaging/robii/data/ms
+
 # robiinet fromms $mspath/SNR_G55_10s.calib.ms \
 # --out $output_path/test_output/real_data/ \
 # --model_path $output_path/train_output/robiinet.pth \
