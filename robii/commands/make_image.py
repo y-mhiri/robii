@@ -38,8 +38,8 @@ def robii():
 @click.option('--mstep_size', '-m', default=1.0, help='step size for m step')
 @click.option('--threshold', '-t', default=0.1, help='threshold')
 @click.option('--dof', '-d', default=1.0, help='degrees of freedom')
-@click.option('--fits', '-f', default=False, help='save as fits')
-@click.option('--plot', '-p', default=False, help='plot')
+@click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
+@click.option('--plot/--no-plot', '-p', default=False, help='plot')
 def fromms(mspath, out, fits, image_size, cellsize, nchan, niter, threshold, dof, miter, mstep_size, plot):
     """
     Make an image from a measurement set
