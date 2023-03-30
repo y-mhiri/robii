@@ -15,9 +15,9 @@ import click
 @click.option('--out', default='.', help='Output directory')
 @click.option('--model_name', default='robii', help='Model name')
 @click.option('--logpath', default='log.txt', help='Log path')
-@click.option('--true_init', default=False, help='True initialisation')
+@click.option('--true_init/--dirty_init', default=False, help='True initialisation')
 def train_model(dset_path, nepoch, batch_size, net_depth, learning_rate, step, out, model_name, logpath, true_init):
-    train(dset_path, nepoch, batch_size, net_depth, learning_rate, step, out, model_name, logpath)
+    train(dset_path, nepoch, batch_size, net_depth, learning_rate, step, out, model_name, logpath, true_init=true_init)
 
 
 
