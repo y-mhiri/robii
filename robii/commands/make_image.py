@@ -78,7 +78,7 @@ def fromms(mspath, out, fits, image_size, cellsize, nchan, niter, threshold, dof
 @click.option('--nimages', '-n', default=10, help='number of images to show')
 @click.option('--idx', '-i', default=-1, help='index of image to show')
 @click.option('--out', '-o', default='.', help='output directory')
-@click.option('--fits', '-f', default=False, help='save as fits')
+@click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
 @click.option('--image_size', '-s', default=256, help='image size')
 @click.option('--cellsize', '-c', default=None, help='cellsize in arcseconds')
 @click.option('--niter', '-i', default=1000, help='number of iterations')
@@ -165,7 +165,7 @@ def robiinet():
 @click.option('--mstep_size', '-m', default=1.0, help='step size for m step')
 @click.option('--threshold', '-t', default=0.001, help='threshold')
 @click.option('--model_path', '-m', default=None, help='path to model pth')
-@click.option('--fits', '-f', default=False, help='save as fits')
+@click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
 def fromms(mspath, out, fits, image_size, cellsize, niter, threshold, model_path, miter, mstep_size):
     """
     Make an image from a measurement set
@@ -202,7 +202,7 @@ def fromms(mspath, out, fits, image_size, cellsize, niter, threshold, model_path
 @click.option('--nimages', '-n', default=1, help='number of images to show')
 @click.option('--idx', '-i', default=-1, help='index of image to show')
 @click.option('--out', '-o', default='.', help='output directory')
-@click.option('--fits', '-f', default=False, help='save as fits')
+@click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
 @click.option('--image_size', '-s', default=None, help='image size')
 @click.option('--cellsize', '-c', default=None, help='cellsize in arcseconds')
 @click.option('--niter', '-i', default=10, help='number of iterations')
