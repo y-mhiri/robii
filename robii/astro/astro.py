@@ -7,6 +7,8 @@ def generate_directions(npix, cellsize):
     """
     generate direction cosines vectors (l,m,n)
     for an image of size (npix, npix) and a cellsize defined in radians
+    (assumes a small angle approximation)
+
     Input :
     - (int) npix : image pixel size
     - (float) cellsize : size of a pixel in radians

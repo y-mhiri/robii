@@ -18,6 +18,13 @@ import click
 def save_telescope_raw(msname, out):
     """
     Save the uv plane and antenna positions in a zarr file
+
+    Parameters
+    ----------
+    msname : str
+        Path to the measurement set
+    out : str
+        Output path (without extension)
     """
 
     # Open the measurement set
