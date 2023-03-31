@@ -49,6 +49,11 @@ def save_telescope_raw(msname, out):
 def load_telescope(path):
     """
     Load the uv plane and antenna positions from a zarr file
+
+    Parameters
+    ----------
+    path : str
+        Path to the zarr file
     """
 
     # Open the zarr file
