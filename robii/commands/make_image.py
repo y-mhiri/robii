@@ -45,10 +45,8 @@ def fromms(mspath, out, fits, image_size, cellsize, nchan, niter, threshold, dof
     Make an image from a measurement set
     """
 
-    # read ms and extractuvw and freq
 
-    # convert cellsize to radians 
-
+    
     npix_x, npix_y = image_size, image_size
     imager = Imager.from_ms(mspath, cellsize=cellsize, npix_x=npix_x, npix_y=npix_y)
     
