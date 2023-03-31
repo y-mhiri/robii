@@ -49,7 +49,7 @@ class RobiiNet(nn.Module):
         if alpha is not None:
             self.alpha = nn.Parameter(torch.tensor(alpha, requires_grad=False))
         else:
-            self.alpha = nn.Parameter(torch.tensor(0.001, requires_grad=False))
+            self.alpha = nn.Parameter(torch.tensor(0.1, requires_grad=False))
             
         self.softthresh = nn.ReLU()
           
@@ -167,8 +167,8 @@ class RobiiNet(nn.Module):
 
         xk = x0
 
-        tau = 1 / (torch.ones(self.nvis) + (torch.abs(y - self.W(xk))**2).to(torch.float))
-        # tau = torch.zeros(self.nvis)
+        # tau = 1 / (torch.ones(self.nvis) + (torch.abs(y - self.W(xk))**2).to(torch.float))
+        tau = torch.zeros(self.nvis)
         for k in range(self.depth):
            
            xk, tau = self.one_iteration(xk, y, tau)
