@@ -19,13 +19,12 @@ RUN add-apt-repository -s ppa:kernsuite/kern-8 && \
  apt-get install -y python3-casacore
 
 # Clone the ROBII repository
-COPY . /opt/robbi
+COPY . /opt/robii
 
 # Set the working directory
-WORKDIR /opt/robbi
+WORKDIR /opt/robii
 
-# Install numpy version 1.20.0, then install the package using pip
-# RUN pip3 install numpy==1.20.0 && \
+# RUN pip3 install .
 RUN pip3 install .
 
 # Set up an entrypoint to run the robii command when starting the container
