@@ -63,10 +63,10 @@ def unrolled_imager(vis, model_path, freq, uvw, npix_x, npix_y, cellsize, niter,
 
     checkpoint = torch.load(model_path)
     net_width = checkpoint["model_state_dict"]["W.weight"].shape[0]
-    print('net_width: ', net_width)
     net = RobustLayer(net_width, model_path)
 
     if verbose:
+        print('net_width: ', net_width)
         print('Loading model')
         print('Model path: ', model_path)
         print('Model width: ', net_width)
@@ -82,8 +82,9 @@ def unrolled_imager(vis, model_path, freq, uvw, npix_x, npix_y, cellsize, niter,
         if verbose:
             print('Computing initial model image')
 
-        print(f'freq: {freq.shape}')
-        print(f'uvw: {uvw.shape}')
+            print(f'freq: {freq.shape}')
+            print(f'uvw: {uvw.shape}')
+            
         model_image = ms2dirty(  
                                 uvw = uvw,
                                 freq = freq,
