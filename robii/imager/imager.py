@@ -12,7 +12,7 @@ import os
 
 class Imager():
 
-    def __init__(self, vis, freq, uvw, cellsize, npix_x, npix_y):
+    def __init__(self, vis, freq, uvw, cellsize, npix_x, npix_y, verbose=True):
 
         self.cellsize = cellsize
         self.npix_x = npix_x
@@ -30,12 +30,13 @@ class Imager():
         self.residual_image = None
 
         # print info about the data
-        print('Data info:')
-        print('Number of visibilities: ', self.nvis)
-        print('Number of channels: ', len(self.freq))
-        print('Number of pixels: ', self.npix_x, self.npix_y)
-        print('Cellsize: ', self.cellsize)
-        print('Image size (degree): ', self.npix_x*self.cellsize, self.npix_y*self.cellsize)
+        if verbose:
+            print('Data info:')
+            print('Number of visibilities: ', self.nvis)
+            print('Number of channels: ', len(self.freq))
+            print('Number of pixels: ', self.npix_x, self.npix_y)
+            print('Cellsize: ', self.cellsize)
+            print('Image size (degree): ', self.npix_x*self.cellsize, self.npix_y*self.cellsize)
 
     
     @classmethod
