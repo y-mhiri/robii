@@ -7,7 +7,7 @@ from ..math.stats import complex_normal
 from .rfi import RFI 
 from scipy.constants import speed_of_light
 from scipy.stats import invgamma, gamma, invgauss
-from .sky_model import generate_sky_model
+from .sky_model import generate_sky_model, Source
 from ..astro.mstozarr import load_telescope
 
 from PIL import Image
@@ -62,7 +62,7 @@ class ViSim():
         self.uvw, self.uvw_index, self.antenna_positions = load_telescope(f'{ROOT_DIR}/../data/telescopes/{telescope}.zip')
         self.nvis = len(self.uvw)
 
-        # Antenna are assumed to be on the same plane
+        # radio interferometer is assumed coplanar
         self.uvw[:,-1] = 0
 
         # Compute the maximum cellsize
@@ -420,7 +420,19 @@ class ViSim():
         return dirty_image
 
     def simulate_sky_image(self, rng=np.random.default_rng()):
-        return generate_sky_model(self.npixel, rng=rng).squeeze()
+
+        nsources = np.random.randint(2,10)
+        power = np.random.uniform(0.5, 10, nsources)
+        scale = np.random.uniform(2, 3, (nsources, 2))
+        center = np.random.randint(0, self.npixel//2, (nsources, 2))
+        sources = [Source(center=c, power=p, scale=s) for c,p,s in zip(center, power, scale)]
+        sky_image = generate_sky_model(self.npixel, sources=sources, rng=rng).squeeze()
+        if np.sum(sky_image) == 0:
+            raise ValueError("Sky image is empty")
+        
+        
+        return generate_sky_model(self.npixel, sources=sources, rng=rng).squeeze()
+        # return generate_sky_model(self.npixel, rng=rng).squeeze()
 
     def simulate_noise_free_visibilities(self, model_image):
         
