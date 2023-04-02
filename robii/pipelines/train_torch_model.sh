@@ -19,7 +19,10 @@ mkdir log
 
 # Generate train datasets 
 generate_dataset simulate --ndata 128 \
---telescope vla-synthesis \
+--telescope vla \
+--synthesis 8 \
+--dtime 3600 \
+--dec 'zenith' \
 --npixel 128 \
 --out $datasets_path/train \
 --freq 1.4e9 \
