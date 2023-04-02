@@ -18,7 +18,7 @@ def ellipsoid(center, P, scale, npixel):
     return ellipsoid_image
 
 def generate_sky_model(npixel, src_density=.5, scale_min=5, scale_max=20,
-                       sources=None, rng=np.random.default_rng()):
+                       sources=None, add_noise=False, rng=np.random.default_rng()):
 
     skymodel = np.zeros((npixel, npixel))
 
@@ -39,5 +39,9 @@ def generate_sky_model(npixel, src_density=.5, scale_min=5, scale_max=20,
         source_power = s.power
         source_scale = s.scale
         skymodel += ellipsoid(source_center, source_power, source_scale, npixel)
+
+    if add_noise:
+        std = np.sqrt(np.sum(skymodel**2)/nsources)/100
+        skymodel += rng.normal(0, std, size=(npixel, npixel))
 
     return skymodel
