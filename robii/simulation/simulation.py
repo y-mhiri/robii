@@ -5,10 +5,11 @@ from ducc0.wgridder import dirty2ms, ms2dirty
 import numpy as np
 from ..math.stats import complex_normal
 from .rfi import RFI 
+from .synthesis import compute_uvw_synthesis
 from scipy.constants import speed_of_light
 from scipy.stats import invgamma, gamma, invgauss
 from .sky_model import generate_sky_model, Source
-from ..astro.mstozarr import load_telescope
+from ..astro.mstozarr import load_telescope, load_telescope_from_itrf
 
 from PIL import Image
 from omegaconf import OmegaConf
@@ -26,6 +27,9 @@ class ViSim():
                  ndata=1,
                  npixel=64, 
                  telescope='vla', 
+                 synthesis_time = 0,
+                 integration_time = 0,
+                 dec='zenith',
                  freq=np.array([3e8]),
                  add_noise=False, 
                  snr=100, 
@@ -51,15 +55,36 @@ class ViSim():
         self.rng = rng
         self.ndata = ndata
         self.telescope = telescope
+        # self.uvw, self.uvw_index, self.antenna_positions, self.telescope_location_lon_lat = load_telescope(f'{ROOT_DIR}/../data/telescopes/{telescope}.zip')
+        self.antenna_positions, self.telescope_location_lon_lat = load_telescope_from_itrf(f'{ROOT_DIR}/../data/telescopes/{telescope}.itrf')
 
+        if synthesis_time == 0:
+            snapshot = True
+        else:
+            snapshot = False
+        
+        self.synthesis_time = synthesis_time
+        self.integration_time = integration_time
+        if dec == 'zenith':
+            self.dec = self.telescope_location_lon_lat[1] * 180 / np.pi
+        else:
+            self.dec = dec
+        
         # Define the frequency and wavelength
         self.freq = np.array([freq]).reshape(-1)
         self.nfreq = len(self.freq)
         self.wl = speed_of_light / self.freq
 
 
+
+        
         # Load the telescope configuration and select the number of visibilities
-        self.uvw, self.uvw_index, self.antenna_positions = load_telescope(f'{ROOT_DIR}/../data/telescopes/{telescope}.zip')
+        self.uvw, self.uvw_index = compute_uvw_synthesis(antenna_positions=self.antenna_positions,
+                                         telescope_location=self.telescope_location_lon_lat,
+                                         dec=self.dec,
+                                         synthesis_time=synthesis_time,
+                                         integration_time=integration_time,
+                                         snapshot=snapshot)
         self.nvis = len(self.uvw)
 
         # radio interferometer is assumed coplanar
@@ -419,14 +444,19 @@ class ViSim():
         
         return dirty_image
 
-    def simulate_sky_image(self, rng=np.random.default_rng()):
+    def simulate_sky_image(self, sources=None, add_noise=True, rng=np.random.default_rng()):
 
-        nsources = np.random.randint(2,10)
-        power = np.random.uniform(0.5, 10, nsources)
-        scale = np.random.uniform(2, 3, (nsources, 2))
-        center = np.random.randint(0, self.npixel//2, (nsources, 2))
-        sources = [Source(center=c, power=p, scale=s) for c,p,s in zip(center, power, scale)]
-        sky_image = generate_sky_model(self.npixel, sources=sources, rng=rng).squeeze()
+        if sources is None:
+            nsources = np.random.poisson(20)
+            power = np.random.uniform(0.5, 10, nsources)
+            scale = np.random.uniform(2, 30, (nsources, 2))
+            center = np.random.randint(-self.npixel//2, self.npixel//2, (nsources, 2))
+            sources = [Source(center=c, power=p, scale=s) for c,p,s in zip(center, power, scale)]
+        else:
+            if not isinstance(sources, list):
+                sources = [sources]
+            
+        sky_image = generate_sky_model(self.npixel, sources=sources, add_noise=add_noise, rng=rng).squeeze()
         if np.sum(sky_image) == 0:
             raise ValueError("Sky image is empty")
         
@@ -573,7 +603,7 @@ class ViSim():
 
 
 
-    
+
 
 
 
