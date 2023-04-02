@@ -16,6 +16,9 @@ def generate_dataset():
 @click.option('--ndata', default=10, help='Number of data to generate')
 @click.option('--telescope', default='vla', help='Telescope name')
 @click.option('--npixel', default=32, help='Number of pixels')
+@click.option('--synthesis', default=0, help='synthesis time')
+@click.option('--dtime', default=0.0, help='Integration time')
+@click.option('--dec', default='zenith', help='Declination of source')
 @click.option('--snr', default=10.0, help='Signal to noise ratio')
 @click.option('--texture_distributions', default=['invgamma', 'gamma', 'invgauss'], help='Texture distributions', multiple=True)
 @click.option('--dof_ranges', default=[(5.0,10.0)], help='Degrees of freedom ranges', multiple=True)
@@ -27,7 +30,8 @@ def generate_dataset():
 @click.option('--rfi_power', default=[1.0], help='Rfi array', multiple=True)
 @click.option('--freq', default=3.0e8, help='Frequency')
 @click.option('--out', default='dataset.zarr', help='Output path')
-def simulate(ndata, telescope, npixel, snr, texture_distributions, dof_ranges, add_noise, add_compound, add_rfi, add_calibration_error, std_calibration_error, rfi_power, freq, out):
+def simulate(ndata, telescope, synthesis, dtime, dec, npixel, snr, texture_distributions, dof_ranges, add_noise, add_compound, 
+             add_rfi, add_calibration_error, std_calibration_error, rfi_power, freq, out):
     """
     Generate a dataset
     """
@@ -39,6 +43,9 @@ def simulate(ndata, telescope, npixel, snr, texture_distributions, dof_ranges, a
 
     sim = ViSim(ndata=ndata,
                 telescope=telescope,
+                synthesis_time=synthesis,
+                integration_time=dtime,
+                dec=dec,
                 npixel=npixel,
                 snr=snr,
                 texture_distributions=texture_distributions,
