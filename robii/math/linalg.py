@@ -115,4 +115,27 @@ def normalized_cross_correlation(X, Y):
     Xvec, Yvec = X.reshape(-1), Y.reshape(-1)
 
     return np.sum( [(Xi - muX)*(Yi - muY) for Xi,Yi in zip(Xvec,Yvec)])/(N*sigmaX*sigmaY)
-    
+
+def Rx(phi):
+    """
+    Rotation matrix around x axis
+    """
+    return np.array([[1, 0, 0],
+                     [0, np.cos(phi), np.sin(phi)],
+                     [0, -np.sin(phi), np.cos(phi)]])
+
+def Ry(phi):
+    """
+    Rotation matrix around y axis
+    """
+    return np.array([[np.cos(phi), 0, -np.sin(phi)],
+                     [0, 1, 0],
+                     [np.sin(phi), 0, np.cos(phi)]])
+
+def Rz(phi):
+    """
+    Rotation matrix around z axis
+    """
+    return np.array([[np.cos(phi), np.sin(phi), 0],
+                     [-np.sin(phi), np.cos(phi), 0],
+                     [0, 0, 1]])
