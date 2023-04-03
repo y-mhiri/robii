@@ -6,6 +6,8 @@ import torch
 
 from torch import nn
 
+from copy import deepcopy
+
 
 """
 Pytorch Models and operators
@@ -207,8 +209,9 @@ class RobiiNetV2(nn.Module):
 
     def forward(self, y, H, threshold=1e-3, niter=10, x0=None):
 
-        nvis = y.shape[1]
+        nvis = y.shape[2]
         batch_size = y.shape[0]
+
         assert nvis % self.net_width == 0, "nvis must be divisible by net_width"
 
         nblocks = nvis // self.net_width
@@ -217,10 +220,10 @@ class RobiiNetV2(nn.Module):
 
         
         if x0 is None:
-            x0 = torch.sum(torch.matmul(y, H_tensor), dim=1)
+            x0 = torch.sum(torch.matmul(y, H_tensor), dim=1) # ??
 
         xk = x0
-        tau = torch.zeros((batch_size, nblocks, self.net_width))
+        tau = torch.ones((batch_size, nblocks, self.net_width))
 
         for k in range(niter):
               xk, tau = self.one_iteration(xk, y, H_tensor, tau, threshold)
@@ -234,23 +237,30 @@ class RobiiNetV2(nn.Module):
         ## Apply encoder to estimated image
 
         x = xk
-        for bloc_index in H.shape[0]:
-            Hbloc = H[bloc_index, :, :]
-            ybloc = y[:, bloc_index, :]
+        dim = x.shape[-1]
+        # print(x.shape)
 
-            zk = torch.matmul(xk, Hbloc.conj())
+        new_tau = torch.zeros_like(tau)
+        for bloc_index in range(H.shape[0]):
+            H_bloc = H[bloc_index, :, :].clone()
+            y_bloc = y[:, bloc_index, :].reshape(-1,1, self.net_width).clone()
+            zk = torch.matmul(xk, H_bloc.T)/dim
 
             ## Compute robust weight
-            tau = self.expectation_step((torch.abs(ybloc - zk).real**2).to(torch.float), tau[:, bloc_index])
+            tau_bloc = tau[:, bloc_index].reshape(-1,1, self.net_width).clone()
+            tau_bloc = self.expectation_step((torch.abs(y_bloc - zk).real**2).to(torch.float), tau_bloc)
+            new_tau[:, bloc_index] = tau_bloc.reshape(-1, self.net_width).clone()
 
             ## M Step
-            zk = torch.mul(zk , tau)
-            res_bloc = torch.mul(ybloc - zk, Hbloc.T)/self.net_width
+            residual = torch.mul(y_bloc - zk , tau_bloc)
+            residual_image = torch.matmul(residual, H_bloc.conj())/self.net_width
 
-            x += res_bloc
+            x += residual_image
 
         
-        x = torch.sgn(x) * self.softthresh(torch.abs(x).real - threshold*torch.max(torch.abs(x)))
+        x = torch.sgn(x) * nn.ReLU()(torch.abs(x).real - threshold*torch.max(torch.abs(x)))
+
+        return x, new_tau
 
 
     def train_supervised(self, dataloader, loss_fn, optimizer, device, H, npixel=None, threshold=1e-3, niter=10, true_init=False):
@@ -270,7 +280,7 @@ class RobiiNetV2(nn.Module):
             # x0 = torch.zeros_like(x).to(torch.cdouble)
 
             if true_init:
-                pred = self(y, x.to(torch.cdouble),H=H, threshold=threshold, niter=niter)
+                pred = self(y, x0=x.to(torch.cdouble),H=H, threshold=threshold, niter=niter)
             else:
                 pred = self(y,H=H, threshold=threshold, niter=niter)
                 

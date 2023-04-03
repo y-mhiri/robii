@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-output_path=/workdir/mhiriy/robii/outputs
-folder_name=vla_8h_1h
+output_path=/Users/ymhiri/Documents/Dev/unrolled-robust-imaging/outputs
+folder_name=vla-test
 
 out=$output_path/$folder_name
 mkdir $out
@@ -17,8 +17,8 @@ mkdir log
 # Generate train datasets 
 generate_dataset simulate --ndata 128 \
 --telescope vla \
---synthesis 8 \
---dtime 3600 \
+--synthesis 1 \
+--dtime 600 \
 --dec 'zenith' \
 --npixel 128 \
 --out $datasets_path/train \
@@ -39,6 +39,7 @@ train_model --dset_path $datasets_path/train.zip \
 --nepoch 100 \
 --batch_size 16 \
 --net_depth 10  \
+--net_width 351 \
 --learning_rate 0.0001 \
 --step 10 \
 --out $out/train_output \

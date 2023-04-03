@@ -18,8 +18,8 @@ import click
 @click.option('--logpath', default='log.txt', help='Log path')
 @click.option('--true_init/--dirty_init', default=False, help='True initialisation')
 @click.option('--monitor/--no-monitor', default=False, help='monitor metrics at each epochs')
-def train_model(dset_path, nepoch, batch_size, net_depth, learning_rate, step, out, model_name, logpath, true_init, monitor):
-    train(dset_path, nepoch, batch_size, net_depth, learning_rate, step, out, model_name, logpath, true_init=true_init, monitor=monitor)
+def train_model(dset_path, nepoch, batch_size, net_depth, net_width, learning_rate, step, out, model_name, logpath, true_init, monitor):
+    train(dset_path, nepoch, batch_size, net_depth, net_width, learning_rate, step, out, model_name, logpath, true_init=true_init, monitor=monitor)
 
 
 

@@ -167,7 +167,7 @@ def train(dset_path, nepoch, batch_size, net_depth,
             ssim_ = np.zeros(ndata)
             ncc_ = np.zeros(ndata)
             estimated_image = np.zeros((ndata,npixel, npixel))
-            for ii,data in enumerate(dataset[0:10]):
+            for ii,data in enumerate(dataset):
 
                 vis, true_image = data
                 true_image = true_image.reshape(npixel, npixel)
