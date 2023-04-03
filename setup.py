@@ -28,6 +28,7 @@ setuptools.setup(
                 'robii = robii.commands.make_image:robii',
                 'robiinet = robii.commands.make_image:robiinet' ,
                 'generate_dataset = robii.commands.generate_dataset:generate_dataset',
+                'plot_images = robii.commands.generate_dataset:plot_images',
                 'save_telescope = robii.commands.generate_dataset:save_telescope',
                 'train_model = robii.commands.deep:train_model',
                 'test_model = robii.commands.deep:test_model',
