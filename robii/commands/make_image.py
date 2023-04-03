@@ -126,13 +126,13 @@ def fromzarr(zarr, nimages, idx, out, fits, image_size, cellsize, niter, miter, 
         ## show true and estimated image and save 
         plt.figure(figsize=(10, 10))
         plt.subplot(1, 3, 1)
-        plt.imshow(visim.model_images[i])
+        plt.imshow(visim.model_images[i], cmap='Spectral_r')
         plt.title('True Image')
         plt.subplot(1, 3, 2)
-        plt.imshow(estimated_image)
+        plt.imshow(estimated_image, cmap='Spectral_r')
         plt.title('Estimated Image')
         plt.subplot(1, 3, 3)
-        plt.imshow(dirty_image)
+        plt.imshow(dirty_image, cmap='Spectral_r')
         plt.title('Dirty Image')
         plt.savefig(os.path.join(out, f'image_{i}.png'))
 
@@ -239,6 +239,9 @@ def fromzarr(zarr, nimages, idx, out, fits, image_size, cellsize, niter, thresho
                             uvw=visim.uvw,
                             freq=visim.freq)
             
+            dirty_image = imager.make_image(method='dirty')
+
+            
             estimated_image = imager.make_image(method='robiinet', 
                                                 niter=niter, 
                                                 miter=miter, 
@@ -252,16 +255,19 @@ def fromzarr(zarr, nimages, idx, out, fits, image_size, cellsize, niter, thresho
             if fits:
                 imager.save_image(f'{out}/image_{i}.fits', save_fits=fits)
             ## show true and estimated image and save 
+
             plt.figure(figsize=(10, 10))
-            plt.subplot(1, 2, 1)
-            plt.imshow(visim.model_images[i])
+            plt.subplot(1, 3, 1)
+            plt.imshow(visim.model_images[i], cmap='Spectral_r')
             plt.title('True Image')
-            plt.subplot(1, 2, 2)
-            plt.imshow(estimated_image)
+            plt.subplot(1, 3, 2)
+            plt.imshow(estimated_image, cmap='Spectral_r')
             plt.title('Estimated Image')
+            plt.subplot(1, 3, 3)
+            plt.imshow(dirty_image, cmap='Spectral_r')
+            plt.title('Dirty Image')
             plt.savefig(os.path.join(out, f'image_{i}.png'))
-    
-        return True
+            return True
 
 
 if __name__ == '__main__':
