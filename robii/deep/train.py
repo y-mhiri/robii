@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from torch.utils.data import DataLoader
 from torchvision.transforms import ToTensor
-from .models import RobiiNet
+from .models import RobiiNet, RobiiNetV2, forward_operator
 from .datasets import ViDataset
 from ..math.metrics import psnr, ssim, nmse, snr, normalized_cross_correlation
 
@@ -86,6 +86,135 @@ def test_on_sample_dataset(ndata, dataset, model_path):
 
     return df
 
+
+
+def train(dset_path, nepoch, batch_size, net_depth,
+           net_width, learning_rate, step, out, model_name,
+             logpath, true_init=False, monitor=True):
+        
+    dataset = ViDataset(dset_path)
+    npixel = dataset.npixel
+    uvw = dataset.uvw
+    nvis = uvw.shape[0]
+    freq = dataset.freq
+    cellsize = dataset.cellsize
+    ndata = dataset.nimages
+    
+    train_dataloader = DataLoader(dataset, batch_size=batch_size)
+    
+    print(f"Dataset loaded: {dset_path}")
+    logprint(f"Dataset loaded: {dset_path}", path=logpath)
+
+
+    print(f"Number training samples: {ndata}")
+    logprint(f"Number training samples: {ndata}", path=logpath)
+    print(f"Number of pixels: {npixel}")
+    logprint(f"Number of pixels: {npixel}", path=logpath)
+    print(f"Number of visibilities: {nvis}")
+    logprint(f"Number of visibilities: {nvis}", path=logpath)
+    print(f'Cellsize: {cellsize}')
+    logprint(f'Cellsize: {cellsize}', path=logpath)
+    print(f'UVW shape: {uvw.shape}')
+    print(f"Number of frequencies: {freq.shape[0]}")
+    logprint(f"Number of frequencies: {freq.shape[0]}", path=logpath)
+    print(f"Number of epochs: {nepoch}")
+    logprint(f"Number of epochs: {nepoch}", path=logpath)
+    print(f"Batch size: {batch_size}")
+    logprint(f"Batch size: {batch_size}", path=logpath)
+    print(f"Network depth: {net_depth}")
+    logprint(f"Network depth: {net_depth}", path=logpath)
+    print(f"Network width: {net_width}")
+    logprint(f"Network width: {net_width}", path=logpath)
+    print(f"Learning rate: {learning_rate}")
+    logprint(f"Learning rate: {learning_rate}", path=logpath)
+    print(f"Step: {step}")
+    logprint(f"Step: {step}", path=logpath)
+    print(f"Output path: {out}")
+    logprint(f"Output path: {out}", path=logpath)
+    print(f"Model name: {model_name}")
+    logprint(f"Model name: {model_name}", path=logpath)
+    print(f"True init: {true_init}")
+    logprint(f"True init: {true_init}", path=logpath)
+
+
+    
+    model = RobiiNetV2(net_width)
+    optimizer = torch.optim.Adam(model.trainable_robust, lr=learning_rate)
+    loss_fn = nn.MSELoss()
+
+    H = forward_operator(uvw=uvw, freq=freq, npixel=npixel)
+    H = ToTensor()(H)
+    for epoch in range(nepoch):
+                    
+        print(f"Epoch {epoch+1}\n-------------------------------")
+        logprint(f"Epoch {epoch+1}\n-------------------------------", path=logpath)
+        loss = model.train_supervised(train_dataloader, loss_fn, optimizer, device,
+                                       true_init=true_init,
+                                       threshold=0.001,
+                                       niter=net_depth,
+                                       H=H,
+                                       npixel=npixel)
+        
+        logprint(f"loss = {loss}", path=logpath)
+        save_model(f"{model_name}_tmp", nepoch, model, optimizer, dset_path, model_name, loss, uvw, freq, out)
+
+        if monitor or not (epoch+1) % step:
+            # compute estimated image on a sample of the dataset using the instanciated model and the train_dataloader
+
+
+            snr_ = np.zeros(ndata)
+            nmse_ = np.zeros(ndata)
+            ssim_ = np.zeros(ndata)
+            ncc_ = np.zeros(ndata)
+            estimated_image = np.zeros((ndata,npixel, npixel))
+            for ii,data in enumerate(dataset[0:10]):
+
+                vis, true_image = data
+                true_image = true_image.reshape(npixel, npixel)
+
+                pred = model(ToTensor()(vis.reshape(1,-1,1)), H=H, 
+                            threshold=0.001, niter=net_depth)
+                
+                estimated_image[ii] = pred.detach().numpy().reshape(npixel, npixel)
+
+                # compute metrics on the sample of the datase
+                snr_[ii] = snr(estimated_image[ii], true_image)
+                nmse_[ii] = nmse(estimated_image[ii], true_image)
+                ssim_[ii] = ssim(estimated_image[ii], true_image)
+                ncc_[ii] = normalized_cross_correlation(estimated_image[ii], true_image)
+
+            
+               
+                
+            logprint(f"snr: {snr_.mean()} +/- {snr_.std()}", path=logpath)
+            logprint(f"nmse: {nmse_.mean()} +/- {nmse_.std()}", path=logpath)
+            logprint(f"ssim: {ssim_.mean()} +/- {ssim_.std()}", path=logpath)
+            logprint(f"ncc: {ncc_.mean()} +/- {ncc_.std()}", path=logpath)
+            
+
+    
+            
+            # df = test_on_sample_dataset(-1, dataset, f"{out}/{model_name}_tmp.pth")
+
+            # logprint(f"snr: {df['snr'].mean()} +/- {df['snr'].std()}", path=logpath)
+            # logprint(f"nmse: {df['nmse'].mean()} +/- {df['nmse'].std()}", path=logpath)
+            # logprint(f"ssim: {df['ssim'].mean()} +/- {df['ssim'].std()}", path=logpath)
+            # logprint(f"ncc: {df['ncc'].mean()} +/- {df['ncc'].std()}", path=logpath)     
+
+
+
+
+
+        if not (epoch+1) % step:
+            save_model(f"{model_name}_ep-{epoch}", nepoch, model, optimizer, dset_path, model_name, loss, uvw, freq, out)
+
+    save_model(f"{model_name}", nepoch, model, optimizer, dset_path, model_name, loss, uvw, freq, out)
+
+
+
+
+"""
+OLD VERSION OF FUNCTION TO TRAIN ROBIINET
 
 
 def train(dset_path, nepoch, batch_size, net_depth, learning_rate, step, out, model_name, logpath, true_init=False, monitor=True):
@@ -204,3 +333,4 @@ def train(dset_path, nepoch, batch_size, net_depth, learning_rate, step, out, mo
 
     save_model(f"{model_name}", nepoch, model, optimizer, dset_path, model_name, loss, uvw, freq, out)
 
+"""

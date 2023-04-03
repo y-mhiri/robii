@@ -178,7 +178,7 @@ class RobiiNet(nn.Module):
 
 
 
-class RobbiNetV2(nn.Module):
+class RobiiNetV2(nn.Module):
 
     def __init__(self, net_width, alpha=None):
         super().__init__()
@@ -205,7 +205,7 @@ class RobbiNetV2(nn.Module):
     
 
 
-    def forward(self, y, H, threshold, niter=10, x0=None):
+    def forward(self, y, H, threshold=1e-3, niter=10, x0=None):
 
         nvis = y.shape[1]
         batch_size = y.shape[0]
@@ -253,7 +253,8 @@ class RobbiNetV2(nn.Module):
         x = torch.sgn(x) * self.softthresh(torch.abs(x).real - threshold*torch.max(torch.abs(x)))
 
 
-    def train_supervised(self, dataloader, loss_fn, optimizer, device, true_init=False):
+    def train_supervised(self, dataloader, loss_fn, optimizer, device, H, npixel=None, threshold=1e-3, niter=10, true_init=False):
+
 
         size = len(dataloader.dataset)
         self.train()
@@ -269,9 +270,9 @@ class RobbiNetV2(nn.Module):
             # x0 = torch.zeros_like(x).to(torch.cdouble)
 
             if true_init:
-                pred = self(y, x.to(torch.cdouble))
+                pred = self(y, x.to(torch.cdouble),H=H, threshold=threshold, niter=niter)
             else:
-                pred = self(y)
+                pred = self(y,H=H, threshold=threshold, niter=niter)
                 
             loss = loss_fn(pred, x)
 
