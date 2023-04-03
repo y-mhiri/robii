@@ -32,6 +32,7 @@ def train_model(dset_path, nepoch, batch_size, net_depth, learning_rate, step, o
 @click.option('--out', default='.', help='Output directory')
 @click.option('--model_path', default='robii', help='Model name')
 @click.option('--logpath', default='log.txt', help='Log path')
-def test_model(dset_path, mstep_size, miter, niter, threshold, out, model_path, logpath):
-    test(dset_path, model_path, mstep_size, miter, niter, threshold, out)
+@click.option('--name', default=None, help='suffix of output files')
+def test_model(dset_path, mstep_size, miter, niter, threshold, out, name, model_path, logpath):
+    test(dset_path, model_path, mstep_size, miter, niter, threshold, out, name)
 
