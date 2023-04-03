@@ -38,9 +38,10 @@ def robii():
 @click.option('--mstep_size', '-m', default=.0001, help='step size for m step')
 @click.option('--threshold', '-t', default=.0001, help='threshold')
 @click.option('--dof', '-d', default=10.0, help='degrees of freedom')
+@click.option('--robust/--gaussian', default=True)
 @click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
 @click.option('--plot/--no-plot', '-p', default=False, help='plot')
-def fromms(mspath, out, fits, image_size, cellsize, nchan, niter, threshold, dof, miter, mstep_size, plot):
+def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, threshold, dof, robust, fits, plot):
     """
     Make an image from a measurement set
     """
@@ -56,7 +57,7 @@ def fromms(mspath, out, fits, image_size, cellsize, nchan, niter, threshold, dof
         'mstep_size': mstep_size,
         'threshold': threshold,
         'dof': dof,
-        'gaussian': False,
+        'gaussian': robust,
         'verbose': True,
         'plot': plot,
     }
