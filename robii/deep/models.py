@@ -175,4 +175,114 @@ class RobiiNet(nn.Module):
            xk, tau = self.one_iteration(xk, y, tau)
 
         return torch.abs(xk).real
+
+
+
+class RobbiNetV2(nn.Module):
+
+    def __init__(self, net_width, alpha=None):
+        super().__init__()
+
+
+        self.net_width = net_width
+
+        self.estep = nn.Linear(self.net_width, self.net_width)
+        self.update_layer = nn.Linear(self.net_width, self.net_width)
+        self.memory_layer = nn.Linear(self.net_width, self.net_width)
+        self.trainable_robust = []
+        for param in self.estep.parameters():
+            self.trainable_robust.append(param)
+        for param in self.update_layer.parameters():
+            self.trainable_robust.append(param)
+        for param in self.memory_layer.parameters():
+            self.trainable_robust.append(param)
+
+
+    def expectation_step(self, xt, wprev):
+        ht = nn.Sigmoid()(self.estep(xt))
+        wnew = nn.ReLU()(self.update_layer(ht) + self.memory_layer(wprev))
+        return wnew
     
+
+
+    def forward(self, y, H, threshold, niter=10, x0=None):
+
+        nvis = y.shape[1]
+        batch_size = y.shape[0]
+        assert nvis % self.net_width == 0, "nvis must be divisible by net_width"
+
+        nblocks = nvis // self.net_width
+        H_tensor = H.reshape(nblocks, self.net_width, -1)
+        y = y.reshape(-1, nblocks, self.net_width)
+
+        
+        if x0 is None:
+            x0 = torch.sum(torch.matmul(y, H_tensor), dim=1)
+
+        xk = x0
+        tau = torch.zeros((batch_size, nblocks, self.net_width))
+
+        for k in range(niter):
+              xk, tau = self.one_iteration(xk, y, H_tensor, tau, threshold)
+
+        return torch.abs(xk).real
+    
+
+
+    def one_iteration(self, xk, y, H, tau, threshold):
+
+        ## Apply encoder to estimated image
+
+        x = xk
+        for bloc_index in H.shape[0]:
+            Hbloc = H[bloc_index, :, :]
+            ybloc = y[:, bloc_index, :]
+
+            zk = torch.matmul(xk, Hbloc.conj())
+
+            ## Compute robust weight
+            tau = self.expectation_step((torch.abs(ybloc - zk).real**2).to(torch.float), tau[:, bloc_index])
+
+            ## M Step
+            zk = torch.mul(zk , tau)
+            res_bloc = torch.mul(ybloc - zk, Hbloc.T)/self.net_width
+
+            x += res_bloc
+
+        
+        x = torch.sgn(x) * self.softthresh(torch.abs(x).real - threshold*torch.max(torch.abs(x)))
+
+
+    def train_supervised(self, dataloader, loss_fn, optimizer, device, true_init=False):
+
+        size = len(dataloader.dataset)
+        self.train()
+        for batch, (y, x) in enumerate(dataloader):
+            y, x = y.to(device), x.to(device)
+
+            # Compute prediction error
+
+            # std = torch.std(x)/10
+            # xtrain = x + torch.normal(0, std, size=x.shape, device=device)
+            # pred = self(y, xtrain.to(torch.cdouble))
+
+            # x0 = torch.zeros_like(x).to(torch.cdouble)
+
+            if true_init:
+                pred = self(y, x.to(torch.cdouble))
+            else:
+                pred = self(y)
+                
+            loss = loss_fn(pred, x)
+
+            # loss = torch.norm(y - self.W(pred)) 
+            # Backpropagation
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if batch % 100 == 0:
+                loss_val, current = loss.item(), batch * len(x)
+                print(f"loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
+
+        return loss.item()
