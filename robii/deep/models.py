@@ -220,7 +220,7 @@ class RobiiNetV2(nn.Module):
 
         
         if x0 is None:
-            x0 = torch.sum(torch.matmul(y, H_tensor), dim=1) # ??
+            x0 = torch.zeros((batch_size, 1, H.shape[-1]), dtype=torch.cdouble)
 
         xk = x0
         tau = torch.ones((batch_size, nblocks, self.net_width))
@@ -238,14 +238,12 @@ class RobiiNetV2(nn.Module):
 
         x = xk
         dim = x.shape[-1]
-        # print(x.shape)
 
         new_tau = torch.zeros_like(tau)
         for bloc_index in range(H.shape[0]):
             H_bloc = H[bloc_index, :, :].clone()
             y_bloc = y[:, bloc_index, :].reshape(-1,1, self.net_width).clone()
             zk = torch.matmul(xk, H_bloc.T)/dim
-
             ## Compute robust weight
             tau_bloc = tau[:, bloc_index].reshape(-1,1, self.net_width).clone()
             tau_bloc = self.expectation_step((torch.abs(y_bloc - zk).real**2).to(torch.float), tau_bloc)

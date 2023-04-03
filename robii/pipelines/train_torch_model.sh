@@ -18,7 +18,7 @@ mkdir log
 generate_dataset simulate --ndata 128 \
 --telescope vla \
 --synthesis 1 \
---dtime 600 \
+--dtime 3600 \
 --dec 'zenith' \
 --npixel 128 \
 --out $datasets_path/train \

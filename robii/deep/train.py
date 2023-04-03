@@ -173,7 +173,7 @@ def train(dset_path, nepoch, batch_size, net_depth,
                 true_image = true_image.reshape(npixel, npixel)
 
                 pred = model(ToTensor()(vis.reshape(1,-1,1)), H=H, 
-                            threshold=0.001, niter=net_depth)
+                            threshold=0.001, niter=net_depth, x0=None)
                 
                 estimated_image[ii] = pred.detach().numpy().reshape(npixel, npixel)
 
