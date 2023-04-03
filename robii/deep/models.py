@@ -49,7 +49,7 @@ class RobiiNet(nn.Module):
         if alpha is not None:
             self.alpha = nn.Parameter(torch.tensor(alpha, requires_grad=False))
         else:
-            self.alpha = nn.Parameter(torch.tensor(0.1, requires_grad=False))
+            self.alpha = nn.Parameter(torch.tensor(0.001, requires_grad=False))
             
         self.softthresh = nn.ReLU()
           
@@ -123,6 +123,7 @@ class RobiiNet(nn.Module):
                 
             loss = loss_fn(pred, x)
 
+            # loss = torch.norm(y - self.W(pred)) 
             # Backpropagation
             optimizer.zero_grad()
             loss.backward()
