@@ -103,7 +103,6 @@ def compute_uvw_synthesis(synthesis_time, integration_time, dec,
     """
 
     # Compute the number of integrations
-    n_integrations = int(synthesis_time*3600/integration_time)
     
     antenna_positions = rotate_antenna_positions(antenna_positions, telescope_location)
     baselines, ant_index_baselines = compute_baselines(antenna_positions)
@@ -117,7 +116,8 @@ def compute_uvw_synthesis(synthesis_time, integration_time, dec,
     if snapshot:
         uvw = np.zeros((1, baselines.shape[0], 3))
         return project_baselines(baselines, 0, dec), ant_index_baselines
-
+    
+    n_integrations = int(synthesis_time*3600/integration_time)
     uvw = np.zeros((n_integrations, baselines.shape[0], 3))
     ant_index = np.zeros((n_integrations, baselines.shape[0], 2), dtype=int)
     H = np.linspace(-synthesis_time/2, synthesis_time/2, n_integrations)
