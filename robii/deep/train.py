@@ -146,7 +146,7 @@ def train(dset_path, nepoch, batch_size, net_depth, learning_rate, step, out, mo
         logprint(f"loss = {loss}", path=logpath)
         save_model(f"{model_name}_tmp", nepoch, model, optimizer, dset_path, model_name, loss, uvw, freq, out)
 
-        if monitor:
+        if monitor or not (epoch+1) % step:
             # compute estimated image on a sample of the dataset using the instanciated model and the train_dataloader
             df = test_on_sample_dataset(-1, dataset, f"{out}/{model_name}_tmp.pth")
 
