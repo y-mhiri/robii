@@ -9,7 +9,7 @@ from ..simulation.simulation import ViSim
 
 import pandas as pd
 
-def test(dataset_path, model_path, mstep_size, miter, niter, threshold, out):
+def test(dataset_path, model_path, mstep_size, miter, niter, threshold, out, name=None):
 
     # read dataset
     visim = ViSim.from_zarr(dataset_path)
@@ -50,7 +50,10 @@ def test(dataset_path, model_path, mstep_size, miter, niter, threshold, out):
         # save metrics
         df.loc[i] = [snr_, psnr_, ssim_, ncc_]
 
-    df.to_csv(f'{out}/metrics.csv')
+    if name is None:
+        df.to_csv(f'{out}/metrics.csv')
+    else:
+        df.to_csv(f'{out}/metrics_{name}.csv')
 
     return df
 
