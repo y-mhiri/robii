@@ -1,21 +1,18 @@
 #!/bin/bash
 
 
-output_path=/synced/robii/outputs/test
+output_path=/workdir/mhiriy/robii/outputs
+folder_name=vla_8h_1h_nonoise
 
-cd $output_path
+out=$output_path/$folder_name
+mkdir $out
+cd $out
 
 mkdir datasets
-datasets_path=$output_path/datasets
+datasets_path=$out/datasets
 
-
-mkdir test_output
-mkdir test_output/images
-mkdir test_output/real_data
 mkdir train_output
 mkdir log
-
-
 
 # Generate train datasets 
 generate_dataset simulate --ndata 128 \
@@ -26,15 +23,15 @@ generate_dataset simulate --ndata 128 \
 --npixel 128 \
 --out $datasets_path/train \
 --freq 1.4e9 \
---add_noise \
---snr 20 \
---add_compound \
---texture_distributions invgamma \
---dof_ranges 3 10 \
---texture_distributions gamma \
---dof_ranges .1 5 \
---texture_distributions invgauss \
---dof_ranges .5 1
+# --add_noise \
+# --snr 20 \
+# --add_compound \
+# --texture_distributions invgamma \
+# --dof_ranges 3 10 \
+# --texture_distributions gamma \
+# --dof_ranges .1 5 \
+# --texture_distributions invgauss \
+# --dof_ranges .5 1
 
 
 # train the model
@@ -44,9 +41,9 @@ train_model --dset_path $datasets_path/train.zip \
 --net_depth 10  \
 --learning_rate 0.0001 \
 --step 10 \
---out $output_path/train_output \
+--out $out/train_output \
 --model_name robiinet \
---logpath $output_path/log/log.out \
+--logpath $out/log/log.out \
 --true_init
 
 # # generate test dataset
