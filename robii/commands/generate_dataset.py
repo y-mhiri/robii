@@ -1,9 +1,11 @@
 from ..simulation.simulation import ViSim
 from ..simulation.rfi import RFI
 from ..astro.mstozarr import save_telescope_raw
+from ..imager.imager import Imager
+from ..plot.plot import show_images
 
 import click 
-
+import numpy as np
 
 @click.group()
 def generate_dataset():
@@ -35,9 +37,6 @@ def simulate(ndata, telescope, synthesis, dtime, dec, npixel, snr, texture_distr
     """
     Generate a dataset
     """
-
-    print(texture_distributions)
-    print(dof_ranges)
 
     rfi_array = [RFI(power) for power in rfi_power]
 
@@ -83,6 +82,32 @@ def save_telescope(ms, out):
 
     save_telescope_raw(ms, out)
 
+
+@click.command()
+@click.argument('DSETPATH', type=click.Path(exists=True))
+@click.argument('OUTPATH', type=click.Path(exists=True))
+@click.option('--nimages', '-n', default=1, help='number of images to plot')
+# @click.option('--idx')
+def plot_images(dsetpath, outpath, nimages):
+
+    sim = ViSim.from_zarr(dsetpath)
+
+    image_idxs = np.random.choice(np.arange(sim.ndata), size=nimages, replace=False)
+
+    cellsize = sim.cellsize
+    npix_x, npix_y = sim.npixel, sim.npixel
+    freq = sim.freq
+    uvw = sim.uvw
+
+    for ii, idx in enumerate(image_idxs):
+
+        imager = Imager(sim.vis[idx], cellsize=cellsize, npix_x=npix_x, npix_y=npix_y, freq=freq, uvw=uvw)
+        # dirty_image = imager.make_image(method='dirty')
+
+        images = [(sim.model_images[idx], 'Sky image')]
+                #   (dirty_image, 'Dirty image')]
+
+        show_images(*images, cmap='Spectral_r', figsize=(10,10), save=True, out=f'{outpath}/image_{ii}')        
 
 if __name__ == '__main__':
     generate_dataset()
