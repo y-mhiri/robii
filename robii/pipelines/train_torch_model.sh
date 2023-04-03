@@ -2,7 +2,7 @@
 
 
 output_path=/workdir/mhiriy/robii/outputs
-folder_name=GRETSI
+folder_name=vla_8h_1h
 
 out=$output_path/$folder_name
 mkdir $out
@@ -16,11 +16,11 @@ mkdir log
 
 # Generate train datasets 
 generate_dataset simulate --ndata 128 \
---telescope random_static \
---synthesis 0 \
---dtime 0 \
+--telescope vla \
+--synthesis 8 \
+--dtime 3600 \
 --dec 'zenith' \
---npixel 64 \
+--npixel 128 \
 --out $datasets_path/train \
 --freq 1.4e9 \
 --add_noise \
