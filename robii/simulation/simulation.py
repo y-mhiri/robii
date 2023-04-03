@@ -444,13 +444,12 @@ class ViSim():
         
         return dirty_image
 
-    def simulate_sky_image(self, sources=None, add_noise=True, rng=np.random.default_rng()):
+    def simulate_sky_image(self, sources=None, add_noise=False, rng=np.random.default_rng()):
 
         if sources is None:
-            # nsources = np.random.poisson(20)
-            nsources = np.random.randint(2,10)
+            nsources = np.random.poisson(20)
             power = np.random.uniform(0.5, 10, nsources)
-            scale = np.random.uniform(2, 3, (nsources, 2))
+            scale = np.random.uniform(10, 50, (nsources, 2))
             center = np.random.randint(-self.npixel//2, self.npixel//2, (nsources, 2))
             sources = [Source(center=c, power=p, scale=s) for c,p,s in zip(center, power, scale)]
         else:
@@ -462,7 +461,7 @@ class ViSim():
             raise ValueError("Sky image is empty")
         
         
-        return generate_sky_model(self.npixel, sources=sources, rng=rng).squeeze()
+        return sky_image
         # return generate_sky_model(self.npixel, rng=rng).squeeze()
 
     def simulate_noise_free_visibilities(self, model_image):
