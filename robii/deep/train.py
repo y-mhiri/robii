@@ -67,9 +67,9 @@ def test_on_sample_dataset(ndata, dataset, model_path):
         imager = Imager(vis.reshape(-1,1), uvw=uvw, freq=freq, cellsize=cellsize, npix_x=npixel, npix_y=npixel, verbose=False)
         estimated_image = imager.make_image(method='robiinet', 
                                             niter=10, 
-                                            miter=1, 
+                                            miter=50, 
                                             mstep_size=1, 
-                                            threshold=0.1, 
+                                            threshold=0.001, 
                                             model_path=model_path, 
                                             verbose=False, 
                                             plot=False)
