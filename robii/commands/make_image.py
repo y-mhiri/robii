@@ -35,9 +35,9 @@ def robii():
 @click.option('--nchan', '-n', default=1, help='number of channels')
 @click.option('--niter', '-i', default=10, help='number of iterations')
 @click.option('--miter', '-t', default=1, help='number of iterations for m step')
-@click.option('--mstep_size', '-m', default=1.0, help='step size for m step')
-@click.option('--threshold', '-t', default=0.1, help='threshold')
-@click.option('--dof', '-d', default=1.0, help='degrees of freedom')
+@click.option('--mstep_size', '-m', default=.0001, help='step size for m step')
+@click.option('--threshold', '-t', default=.0001, help='threshold')
+@click.option('--dof', '-d', default=10.0, help='degrees of freedom')
 @click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
 @click.option('--plot/--no-plot', '-p', default=False, help='plot')
 def fromms(mspath, out, fits, image_size, cellsize, nchan, niter, threshold, dof, miter, mstep_size, plot):
@@ -77,7 +77,7 @@ def fromms(mspath, out, fits, image_size, cellsize, nchan, niter, threshold, dof
 @click.option('--idx', '-i', default=-1, help='index of image to show')
 @click.option('--out', '-o', default='.', help='output directory')
 @click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
-@click.option('--image_size', '-s', default=256, help='image size')
+@click.option('--image_size', '-s', default=None, help='image size')
 @click.option('--cellsize', '-c', default=None, help='cellsize in arcseconds')
 @click.option('--niter', '-i', default=1000, help='number of iterations')
 @click.option('--miter', '-t', default=1, help='number of iterations for m step')
@@ -95,7 +95,10 @@ def fromzarr(zarr, nimages, idx, out, fits, image_size, cellsize, niter, miter, 
     else:
         cellsize = cellsize * np.pi / 180 / 3600
     
-    npix_x, npix_y = image_size, image_size
+    if image_size is None:
+        npix_x, npix_y = image_size, image_size
+    else:
+        npix_x, npix_y = visim.npixel, visim.npixel
 
     if idx == -1:
         idx = np.random.randint(0, visim.ndata, nimages)
@@ -160,8 +163,8 @@ def robiinet():
 @click.option('--cellsize', '-c', default=8.0, help='cellsize in arcseconds')
 @click.option('--niter', '-i', default=10, help='number of iterations')
 @click.option('--miter', '-t', default=1, help='number of iterations for m step')
-@click.option('--mstep_size', '-m', default=1.0, help='step size for m step')
-@click.option('--threshold', '-t', default=0.001, help='threshold')
+@click.option('--mstep_size', '-m', default=.0001, help='step size for m step')
+@click.option('--threshold', '-t', default=.0001, help='threshold')
 @click.option('--model_path', '-m', default=None, help='path to model pth')
 @click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
 def fromms(mspath, out, fits, image_size, cellsize, niter, threshold, model_path, miter, mstep_size):
