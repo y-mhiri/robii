@@ -447,9 +447,10 @@ class ViSim():
     def simulate_sky_image(self, sources=None, add_noise=True, rng=np.random.default_rng()):
 
         if sources is None:
-            nsources = np.random.poisson(20)
+            # nsources = np.random.poisson(20)
+            nsources = np.random.randint(2,10)
             power = np.random.uniform(0.5, 10, nsources)
-            scale = np.random.uniform(2, 30, (nsources, 2))
+            scale = np.random.uniform(2, 3, (nsources, 2))
             center = np.random.randint(-self.npixel//2, self.npixel//2, (nsources, 2))
             sources = [Source(center=c, power=p, scale=s) for c,p,s in zip(center, power, scale)]
         else:
