@@ -49,7 +49,7 @@ Casacore can then be installed with the following command:
 
 ### Windows
 
-Use Vagrant to build a ubuntu-focal image and follow the instructions for Ubuntu
+Use Vagrant ([see here](https://www.vagrantup.com/)) to build a ubuntu-focal image and follow the instructions for Ubuntu
 
 
 ## Installation 
