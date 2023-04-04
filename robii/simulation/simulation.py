@@ -55,6 +55,10 @@ class ViSim():
         self.rng = rng
         self.ndata = ndata
         self.telescope = telescope
+        self.synthesis_time = synthesis_time
+        self.integration_time = integration_time
+        self.dec = dec
+    
         # self.uvw, self.uvw_index, self.antenna_positions, self.telescope_location_lon_lat = load_telescope(f'{ROOT_DIR}/../data/telescopes/{telescope}.zip')
         self.antenna_positions, self.telescope_location_lon_lat = load_telescope_from_itrf(f'{ROOT_DIR}/../data/telescopes/{telescope}.itrf')
 
@@ -216,6 +220,11 @@ class ViSim():
         rfi_power = root["rfi_power"][:]
         rfi_array = [RFI(power) for power in rfi_power]
 
+        synthesis_time = float(metadata["synthesis_time"]) 
+        integration_time = float(metadata["integration_time"]) 
+        dec = float(metadata["dec"]) if metadata["dec"] != 'zenith' else 'zenith'
+
+
         model_images = root["data/model_images"][:]
         vis = root["data/vis"][:]
         clean_vis = root["data/clean_vis"][:]
@@ -223,6 +232,8 @@ class ViSim():
         vis_rfi = root["data/rfi"][:]
         calibration_gains = root["data/gains"][:]
         do_sim = False
+
+
 
         # uvw = root["data/uvw"][:]
         nvis = vis.shape[1]
@@ -241,6 +252,9 @@ class ViSim():
         return cls(ndata=ndata,
                      npixel=npixel,
                         telescope=telescope,
+                        synthesis_time=synthesis_time,
+                        integration_time=integration_time,
+                        dec=dec,
                         add_noise=add_noise,
                         snr=float(noise_kwargs["snr"]),
                         add_compound=add_compound,
@@ -271,7 +285,10 @@ class ViSim():
                     "nfreq" : self.nfreq,
                     "telescope" : self.telescope,
                     "add_rfi" : self.add_rfi,
-                    "nrfi" : len(self.rfi_array)
+                    "nrfi" : len(self.rfi_array),
+                    "synthesis_time" : self.synthesis_time,
+                    "integration_time" : self.integration_time,
+                    "dec" : self.dec,
                     }
 
         
