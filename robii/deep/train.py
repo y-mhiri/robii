@@ -158,38 +158,38 @@ def train(dset_path, nepoch, batch_size, net_depth,
         logprint(f"loss = {loss}", path=logpath)
         save_model(f"{model_name}_tmp", nepoch, model, optimizer, dset_path, model_name, loss, uvw, freq, out)
 
-        if monitor or not (epoch+1) % step:
-            # compute estimated image on a sample of the dataset using the instanciated model and the train_dataloader
+        # if monitor or not (epoch+1) % step:
+        #     # compute estimated image on a sample of the dataset using the instanciated model and the train_dataloader
 
 
-            snr_ = np.zeros(ndata)
-            nmse_ = np.zeros(ndata)
-            ssim_ = np.zeros(ndata)
-            ncc_ = np.zeros(ndata)
-            estimated_image = np.zeros((ndata,npixel, npixel))
-            for ii,data in enumerate(dataset):
+        #     snr_ = np.zeros(ndata)
+        #     nmse_ = np.zeros(ndata)
+        #     ssim_ = np.zeros(ndata)
+        #     ncc_ = np.zeros(ndata)
+        #     estimated_image = np.zeros((ndata,npixel, npixel))
+        #     for ii,data in enumerate(dataset):
 
-                vis, true_image = data
-                true_image = true_image.reshape(npixel, npixel)
+        #         vis, true_image = data
+        #         true_image = true_image.reshape(npixel, npixel)
 
-                pred = model(ToTensor()(vis.reshape(1,-1,1)), H=H, 
-                            threshold=0.001, niter=net_depth, x0=None)
+        #         pred = model(ToTensor()(vis.reshape(1,-1,1)), H=H, 
+        #                     threshold=0.001, niter=net_depth, x0=None)
                 
-                estimated_image[ii] = pred.detach().numpy().reshape(npixel, npixel)
+        #         estimated_image[ii] = pred.detach().numpy().reshape(npixel, npixel)
 
-                # compute metrics on the sample of the datase
-                snr_[ii] = snr(estimated_image[ii], true_image)
-                nmse_[ii] = nmse(estimated_image[ii], true_image)
-                ssim_[ii] = ssim(estimated_image[ii], true_image)
-                ncc_[ii] = normalized_cross_correlation(estimated_image[ii], true_image)
+        #         # compute metrics on the sample of the datase
+        #         snr_[ii] = snr(estimated_image[ii], true_image)
+        #         nmse_[ii] = nmse(estimated_image[ii], true_image)
+        #         ssim_[ii] = ssim(estimated_image[ii], true_image)
+        #         ncc_[ii] = normalized_cross_correlation(estimated_image[ii], true_image)
 
             
                
                 
-            logprint(f"snr: {snr_.mean()} +/- {snr_.std()}", path=logpath)
-            logprint(f"nmse: {nmse_.mean()} +/- {nmse_.std()}", path=logpath)
-            logprint(f"ssim: {ssim_.mean()} +/- {ssim_.std()}", path=logpath)
-            logprint(f"ncc: {ncc_.mean()} +/- {ncc_.std()}", path=logpath)
+        #     logprint(f"snr: {snr_.mean()} +/- {snr_.std()}", path=logpath)
+        #     logprint(f"nmse: {nmse_.mean()} +/- {nmse_.std()}", path=logpath)
+        #     logprint(f"ssim: {ssim_.mean()} +/- {ssim_.std()}", path=logpath)
+        #     logprint(f"ncc: {ncc_.mean()} +/- {ncc_.std()}", path=logpath)
             
 
     
