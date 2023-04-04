@@ -13,8 +13,7 @@ import matplotlib.pyplot as plt
 
 class RobustLayer():
 
-    def __init__(self, nvis, model_path):
-        self.nvis = nvis
+    def __init__(self, model_path):
         checkpoint = torch.load(model_path)
         self.W0 = checkpoint["model_state_dict"]["estep.weight"].detach().numpy()
         self.W1 = checkpoint["model_state_dict"]["update_layer.weight"].detach().numpy()
@@ -62,8 +61,13 @@ def unrolled_imager(vis, model_path, freq, uvw, npix_x, npix_y, cellsize, niter,
     nfreq = len(freq)
 
     checkpoint = torch.load(model_path)
-    net_width = checkpoint["model_state_dict"]["W.weight"].shape[0]
-    net = RobustLayer(net_width, model_path)
+    net_width = checkpoint["model_state_dict"]["estep.weight"].shape[0]
+    print('net_width: ', net_width)
+    print('nvis: ', nvis)
+    print(net_width % nvis)
+    assert nvis % net_width == 0, 'Number of visibilities must be multiple of net_width'
+    
+    net = RobustLayer(model_path)
 
     if verbose:
         print('net_width: ', net_width)
@@ -157,8 +161,10 @@ def unrolled_imager(vis, model_path, freq, uvw, npix_x, npix_y, cellsize, niter,
                 res = np.linalg.norm(curr_residual[...,np.newaxis], axis=-1)**2
                 curr_weights = expected_weights[net_width*p : (net_width) * (p+1)]
             
-            else:
+            else:   
                 raise NotImplementedError('Support number of visibilities not multiple of net_width not implemented yet')
+            
+                #raise NotImplementedError('Support number of visibilities not multiple of net_width not implemented yet')
                 # curr_residual = residual[net_width*p : (net_width) * (p+1), :]
                 # res = np.concatenate(curr_residual, np.zeros((1,nvis-p)))
                 # res = res.reshape(-1,1).astype(np.float32)**2
