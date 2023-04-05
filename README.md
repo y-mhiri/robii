@@ -1,6 +1,9 @@
-# ROBII: ROBust Interferometric Imaging Algorithm
+# ROBII: ROBust Interferometric Imaging Algorithm (in development)
 
-ROBII is a Python package for interferometric imaging that uses a robust statistical model method to solve the imaging problem. For more details on the methodology, please refere to y-mhiri.github.io/publications
+ROBII is a Python package for interferometric imaging that uses a robust statistical model method to solve the imaging problem.
+Additionnaly, ROBII includes RobiiNet, an unrolled deep neural network for radio-interferometric imaging based on the Robii algorithm.
+
+For more details on the methodology, please refere to y-mhiri.github.io/publications
 
 ## Requirements
 
