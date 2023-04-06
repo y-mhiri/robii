@@ -207,7 +207,7 @@ class RobiiNetV2(nn.Module):
     
 
 
-    def forward(self, y, H, threshold=1e-3, niter=10, x0=None):
+    def forward(self, y, H, threshold=1e-3, niter=10, x0=None, mstep_size=1):
 
         nvis = y.shape[2]
         batch_size = y.shape[0]
@@ -226,13 +226,13 @@ class RobiiNetV2(nn.Module):
         tau = torch.ones((batch_size, nblocks, self.net_width))
 
         for k in range(niter):
-              xk, tau = self.one_iteration(xk, y, H_tensor, tau, threshold)
+              xk, tau = self.one_iteration(xk, y, H_tensor, tau, threshold=threshold, mstep_size=mstep_size)
 
-        return torch.abs(xk).real
+        return torch.real(xk)
     
 
 
-    def one_iteration(self, xk, y, H, tau, threshold):
+    def one_iteration(self, xk, y, H, tau, threshold, mstep_size=1):
 
         ## Apply encoder to estimated image
 
@@ -250,8 +250,10 @@ class RobiiNetV2(nn.Module):
             new_tau[:, bloc_index] = tau_bloc.reshape(-1, self.net_width).clone()
 
             ## M Step
-            residual = torch.mul(y_bloc - zk , tau_bloc)
+            # for mit in range(miter):
+            residual = mstep_size * torch.mul(y_bloc - zk , tau_bloc)
             residual_image = torch.matmul(residual, H_bloc.conj())/self.net_width
+            
 
             x += residual_image
 
@@ -261,7 +263,7 @@ class RobiiNetV2(nn.Module):
         return x, new_tau
 
 
-    def train_supervised(self, dataloader, loss_fn, optimizer, device, H, npixel=None, threshold=1e-3, niter=10, true_init=False):
+    def train_supervised(self, dataloader, loss_fn, optimizer, device, H, threshold=1e-3, mstep_size=1, niter=10, SNR=10, true_init=False):
 
 
         size = len(dataloader.dataset)
@@ -271,16 +273,16 @@ class RobiiNetV2(nn.Module):
 
             # Compute prediction error
 
-            # std = torch.std(x)/10
-            # xtrain = x + torch.normal(0, std, size=x.shape, device=device)
             # pred = self(y, xtrain.to(torch.cdouble))
 
             # x0 = torch.zeros_like(x).to(torch.cdouble)
 
             if true_init:
-                pred = self(y, x0=x.to(torch.cdouble),H=H, threshold=threshold, niter=niter)
+                std = np.sqrt(10**-(SNR/10) * torch.var(x))
+                xtrain = x + torch.normal(0, std, size=x.shape, device=device)
+                pred = self(y, x0=xtrain.to(torch.cdouble),H=H, threshold=threshold, niter=niter, mstep_size=mstep_size)
             else:
-                pred = self(y,H=H, threshold=threshold, niter=niter)
+                pred = self(y,H=H, threshold=threshold, niter=niter, mstep_size=mstep_size)
                 
             loss = loss_fn(pred, x)
 
@@ -290,7 +292,7 @@ class RobiiNetV2(nn.Module):
             loss.backward()
             optimizer.step()
 
-            if batch % 100 == 0:
+            if batch % 1 == 0:
                 loss_val, current = loss.item(), batch * len(x)
                 print(f"loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
 
