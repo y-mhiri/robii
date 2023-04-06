@@ -41,6 +41,7 @@ class ViSim():
                  add_calibration_error=False,
                  std_calibration_error=0.1,
                  model_images=None,
+                 dirty_images=None,
                  vis=None, 
                  clean_vis=None,
                  noise=None, 
@@ -168,9 +169,9 @@ class ViSim():
 
 
         if do_sim is True:
-            self.model_images, self.clean_vis, self.vis, self.vis_rfi, self.noise, self.gains = self.simulate(verbose=True)
+            self.model_images, self.dirty_images, self.clean_vis, self.vis, self.vis_rfi, self.noise, self.gains = self.simulate(verbose=True)
         else:
-            self.model_images, self.clean_vis, self.vis, self.vis_rfi, self.noise, self.gains = model_images, clean_vis, vis, vis_rfi, noise, gains
+            self.model_images, self.dirty_images, self.clean_vis, self.vis, self.vis_rfi, self.noise, self.gains = model_images, dirty_images, clean_vis, vis, vis_rfi, noise, gains
 
     @classmethod
     def from_yaml(cls, config):
@@ -323,6 +324,7 @@ class ViSim():
         z.create_dataset('gains', data=self.calibration_gains)
         z.create_dataset('clean_vis', data=self.clean_vis)
         z.create_dataset('model_images', data=self.model_images)
+        z.create_dataset('dirty_images', data=self.dirty_images)
         z.create_dataset('freq', data=self.freq)
         z.create_dataset('antenna_positions', data=self.antenna_positions)
         z.create_dataset('uvw_index', data=self.uvw_index)
@@ -458,7 +460,7 @@ class ViSim():
                     npix_y = npix_y,
                     pixsize_x = self.cellsize,
                     pixsize_y = self.cellsize,
-                    epsilon=1.0e-7)
+                    epsilon=1.0e-7)/self.nvis
         else:
             dirty_image = ms2dirty(
                     uvw = self.uvw,
@@ -468,7 +470,7 @@ class ViSim():
                     npix_y = npix_y,
                     pixsize_x = self.cellsize,
                     pixsize_y = self.cellsize,
-                    epsilon=1.0e-7)
+                    epsilon=1.0e-7)/self.nvis
         
         return dirty_image
 
@@ -477,7 +479,7 @@ class ViSim():
         if sources is None:
             nsources = np.random.poisson(20)
             power = np.random.uniform(0.5, 10, nsources)
-            scale = np.random.uniform(10, 50, (nsources, 2))
+            scale = np.random.uniform(5, 25, (nsources, 2))
             center = np.random.randint(-self.npixel//2, self.npixel//2, (nsources, 2))
             sources = [Source(center=c, power=p, scale=s) for c,p,s in zip(center, power, scale)]
         else:
@@ -516,7 +518,7 @@ class ViSim():
         P0 = np.linalg.norm(vis - np.mean(vis))**2 / self.nvis
         sigma2 = 10**(-snr/10)*P0
 
-        speckle = complex_normal(np.zeros_like(vis), sigma2*np.eye(self.nvis), rng=rng)
+        speckle = complex_normal(np.zeros(self.nvis), sigma2*np.ones(self.nvis), rng=rng)
         return speckle
 
     def simulate_texture_noise(self, dof_ranges, texture_distributions=None, rng=np.random.default_rng()):
@@ -566,6 +568,7 @@ class ViSim():
 
         if update_sky_images:
             self.model_images = zarr.zeros((self.ndata, self.npixel, self.npixel))
+            self.dirty_images = zarr.zeros((self.ndata, self.npixel, self.npixel))
 
         self.clean_vis = zarr.zeros((self.ndata, self.nvis, self.nfreq), dtype=complex)
         self.vis = zarr.zeros((self.ndata, self.nvis, self.nfreq), dtype=complex)
@@ -591,6 +594,7 @@ class ViSim():
 
 
             self.clean_vis[n] = self.simulate_noise_free_visibilities(self.model_images[n])
+            self.dirty_images[n] = self.compute_dirty_image(vis=self.clean_vis[n])
 
             self.calibration_gains[n] = np.ones_like(self.clean_vis[n])
 
@@ -627,7 +631,7 @@ class ViSim():
                 self.vis_rfi[n],_ = self.simulate_rfi_visibilities(self.rfi_array, rng=rng)
                 self.vis[n] += self.vis_rfi[n]
 
-        return self.model_images, self.clean_vis, self.vis, self.vis_rfi,self.noise, self.calibration_gains
+        return self.model_images, self.dirty_images, self.clean_vis, self.vis, self.vis_rfi,self.noise, self.calibration_gains
 
 
 
