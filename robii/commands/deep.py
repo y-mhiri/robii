@@ -16,10 +16,13 @@ import click
 @click.option('--out', default='.', help='Output directory')
 @click.option('--model_name', default='robii', help='Model name')
 @click.option('--logpath', default='log.txt', help='Log path')
+@click.option('--threshold', default=0.001, help='Threshold for ISTA in M STEP')
+@click.option('--mstep_size', default=1.0, help='Step size for ISTA in M STEP')
+@click.option('--snr', default=10.0, help='snr of noise on init image')
 @click.option('--true_init/--dirty_init', default=False, help='True initialisation')
 @click.option('--monitor/--no-monitor', default=False, help='monitor metrics at each epochs')
-def train_model(dset_path, nepoch, batch_size, net_depth, net_width, learning_rate, step, out, model_name, logpath, true_init, monitor):
-    train(dset_path, nepoch, batch_size, net_depth, net_width, learning_rate, step, out, model_name, logpath, true_init=true_init, monitor=monitor)
+def train_model(dset_path, nepoch, batch_size, net_depth, net_width, learning_rate, step, out, model_name, logpath, threshold, mstep_size, snr, true_init, monitor):
+    train(dset_path, nepoch, batch_size, net_depth, net_width, learning_rate, step, out, model_name, logpath, threshold=threshold, mstep_size=mstep_size, true_init=true_init, SNR=snr, monitor=monitor)
 
 
 
