@@ -207,7 +207,7 @@ class RobiiNetV2(nn.Module):
     
 
 
-    def forward(self, y, H, threshold=1e-3, niter=10, x0=None, mstep_size=1):
+    def forward(self, y, H, threshold=1e-3, niter=10, x0=None, mstep_size=1, tau=None):
 
         nvis = y.shape[2]
         batch_size = y.shape[0]
@@ -223,12 +223,13 @@ class RobiiNetV2(nn.Module):
             x0 = torch.zeros((batch_size, 1, H.shape[-1]), dtype=torch.cdouble)
 
         xk = x0
-        tau = torch.ones((batch_size, nblocks, self.net_width))
+        if tau is None:
+            tau = torch.ones((batch_size, nblocks, self.net_width))
 
         for k in range(niter):
               xk, tau = self.one_iteration(xk, y, H_tensor, tau, threshold=threshold, mstep_size=mstep_size)
 
-        return torch.real(xk)
+        return torch.real(xk), tau
     
 
 
@@ -247,7 +248,7 @@ class RobiiNetV2(nn.Module):
             ## Compute robust weight
             tau_bloc = tau[:, bloc_index].reshape(-1,1, self.net_width).clone()
             tau_bloc = self.expectation_step((torch.abs(y_bloc - zk).real**2).to(torch.float), tau_bloc)
-            new_tau[:, bloc_index] = tau_bloc.reshape(-1, self.net_width).clone()
+            new_tau[:, bloc_index] = tau_bloc.reshape(-1, self.net_width)
 
             ## M Step
             # for mit in range(miter):
@@ -268,8 +269,8 @@ class RobiiNetV2(nn.Module):
 
         size = len(dataloader.dataset)
         self.train()
-        for batch, (y, x) in enumerate(dataloader):
-            y, x = y.to(device), x.to(device)
+        for batch, (y, x, xdirty) in enumerate(dataloader):
+            y, x, xdirty = y.to(device), x.to(device), xdirty.to(device)
 
             # Compute prediction error
 
@@ -278,20 +279,53 @@ class RobiiNetV2(nn.Module):
             # x0 = torch.zeros_like(x).to(torch.cdouble)
 
             if true_init:
-                std = np.sqrt(10**-(SNR/10) * torch.var(x))
-                xtrain = x + torch.normal(0, std, size=x.shape, device=device)
-                pred = self(y, x0=xtrain.to(torch.cdouble),H=H, threshold=threshold, niter=niter, mstep_size=mstep_size)
+                # std = np.sqrt(10**-(SNR/10) * torch.var(x))
+                # xtrain = x + torch.normal(0, std, size=x.shape, device=device)
+                torch.autograd.set_detect_anomaly(True)
+                xtrain = xdirty
+                losses = []
+                for ii, alpha in enumerate(np.linspace(0.1, 1, 10)):
+
+
+                    if ii == 0:
+                        pred, tau = self(y, 
+                                    x0=xtrain.to(torch.cdouble),
+                                    H=H,
+                                    threshold=threshold, 
+                                    niter=niter, 
+                                    mstep_size=mstep_size)
+                    else:                    
+                        pred, tau = self(y, 
+                                x0=xtrain.to(torch.cdouble),
+                                H=H,
+                                threshold=threshold, 
+                                niter=niter, 
+                                mstep_size=mstep_size,
+                                tau=tau.detach())
+                        
+                    xtrain = alpha*x + (1-alpha)*xdirty
+
+                    loss = loss_fn(pred, xtrain).clone()
+
+
+
+                    optimizer.zero_grad()   
+                    loss.backward(retain_graph=True)
+
+                    optimizer.step()
+
+                    
             else:
                 pred = self(y,H=H, threshold=threshold, niter=niter, mstep_size=mstep_size)
                 
-            loss = loss_fn(pred, x)
+                loss = loss_fn(pred, x)
 
-            # loss = torch.norm(y - self.W(pred)) 
-            # Backpropagation
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
+                # loss = torch.norm(y - self.W(pred)) 
+                # Backpropagation
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            # print('here')
             if batch % 1 == 0:
                 loss_val, current = loss.item(), batch * len(x)
                 print(f"loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
