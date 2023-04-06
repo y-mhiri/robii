@@ -3,7 +3,7 @@ from scipy.stats import t, norm, invgamma
 from scipy.special import gamma
 
 
-def compute_log_likelihood(_data, distribution = "gaussian", **kwargs):
+def compute_log_likelihood(_data, distribution = "gaussian", white=True, **kwargs):
 
     if distribution == "gaussian":
         _mean, _Cov = kwargs["mean"] , kwargs["Cov"]
@@ -25,21 +25,29 @@ def compute_log_likelihood(_data, distribution = "gaussian", **kwargs):
 def complex_normal(mean, Cov, diag=True, rng=np.random.RandomState(0)): 
 
         n_samples = len(mean)
-        # Check if covariance matrix is symetric
-        if not np.allclose(Cov,Cov.T.conjugate(), atol=1e-08):
-           raise ValueError("Covariance matrix must be symetric.")
 
-        SIGMA = np.zeros((n_samples*2, n_samples*2))
+        if diag:
+            
+            _y_real = rng.normal(size=n_samples) * np.sqrt(np.real(Cov/2)) + np.real(mean)
+            _y_imag = rng.normal(size=n_samples) * np.sqrt(np.imag(Cov/2)) + np.imag(mean)
+            _y = _y_real + 1j*_y_imag
+            _y = _y.reshape((-1,1))
 
-        SIGMA[0: n_samples, 0:n_samples] = np.real(Cov)
-        SIGMA[n_samples: 2*n_samples, n_samples:2*n_samples] = np.real(Cov)
-        
-        SIGMA[0: n_samples, n_samples:2*n_samples] = -np.imag(Cov)
-        SIGMA[n_samples: 2*n_samples, 0: n_samples] = np.imag(Cov)
+        else:
+            if not np.allclose(Cov,Cov.T.conjugate(), atol=1e-08):
+                raise ValueError("Covariance matrix must be symetric.")
+            
+            SIGMA = np.zeros((n_samples*2, n_samples*2))
 
-        SIGMA = (1/2)*SIGMA
+            SIGMA[0: n_samples, 0:n_samples] = np.real(Cov)
+            SIGMA[n_samples: 2*n_samples, n_samples:2*n_samples] = np.real(Cov)
+            
+            SIGMA[0: n_samples, n_samples:2*n_samples] = -np.imag(Cov)
+            SIGMA[n_samples: 2*n_samples, 0: n_samples] = np.imag(Cov)
 
-        if not diag:
+            SIGMA = (1/2)*SIGMA
+
+
             S,D,V = np.linalg.svd(SIGMA)
 
             # if not np.allclose(S,V.T.conjugate(), rtol=1):
@@ -48,16 +56,17 @@ def complex_normal(mean, Cov, diag=True, rng=np.random.RandomState(0)):
 
             S = np.dot(S, np.diag(np.sqrt(D)))
 
-        else:
-            S = np.sqrt(SIGMA)
-
-        MU = np.zeros(2*n_samples)
-        MU[0:n_samples] = np.real(mean).reshape(-1)
-        MU[n_samples:2*n_samples] = np.imag(mean).reshape(-1)
+            MU = np.zeros(2*n_samples)
+            MU[0:n_samples] = np.real(mean).reshape(-1)
+            MU[n_samples:2*n_samples] = np.imag(mean).reshape(-1)
         
-        _y = np.dot(S , rng.normal(0, 1, 2*n_samples)) + MU
+            _y = np.dot(S , rng.normal(0, 1, 2*n_samples)) + MU
+            _y = (_y[0:n_samples] + 1j*_y[n_samples::]).reshape((-1,1))
 
-        return (_y[0:n_samples] + 1j*_y[n_samples::]).reshape((-1,1))
+
+
+
+        return _y
         
         
 def fast_complex_normal(mean, Cov, diag=True, rng=np.random.RandomState(0)): 
