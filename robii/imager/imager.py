@@ -48,9 +48,15 @@ class Imager():
         print(ms.chan_freq.shape)
         print(ms.vis_data.shape)
 
-        freq = np.array([ms.chan_freq[1, :]]).reshape(-1)
-        vis = ms.vis_data[:,:,1].reshape(-1,len(freq))
-        return cls(vis, freq, ms.uvw, cellsize, npix_x, npix_y)
+        vis = ms.vis_data
+        stokeI_vis = (vis[:, :, 0] + vis[:, :, 1])/2
+
+        spw_id = 1
+        stokeI_vis = stokeI_vis[ms.data_desc_id == spw_id]
+        uvw = ms.uvw[ms.data_desc_id == spw_id]
+        freq = np.array([ms.chan_freq[spw_id, :]]).reshape(-1)
+
+        return cls(stokeI_vis, freq, uvw, cellsize, npix_x, npix_y)
     
 
     def make_dirty(self, cellsize=None, npix_x=None, npix_y=None, plot=False):
