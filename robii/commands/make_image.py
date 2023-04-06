@@ -229,7 +229,7 @@ def fromzarr(zarr, nimages, idx, out, fits, image_size, cellsize, niter, thresho
         npix_x, npix_y = image_size, image_size
     
         if idx == -1:
-            idx = np.random.randint(0, visim.ndata, nimages)
+            idx = np.random.choice(len(visim.vis), nimages, replace=False)
         else:
             idx = [idx + i for i in range(nimages)]
     
