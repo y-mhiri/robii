@@ -121,7 +121,7 @@ def unrolled_imager(vis, model_path, freq, uvw, npix_x, npix_y, cellsize, niter,
                         epsilon=1.0e-5 
                 )   
 
-    expected_weights = 1/(expected_weights + np.abs(vis - model_vis)**2)
+    # expected_weights = 1/(expected_weights + np.abs(vis - model_vis)**2)
     # expected_weights = np.ones(nvis)
 
     for it in range(niter):
@@ -231,6 +231,7 @@ def unrolled_imager(vis, model_path, freq, uvw, npix_x, npix_y, cellsize, niter,
                 print('Updating model image')
 
             model_image_k = model_image_k + mstep_size*residual_image
+            # model_image_k =  mstep_size*residual_image
             model_image_k = np.sign(model_image_k) * np.max([np.abs(model_image_k)- threshold*np.max(np.abs(model_image_k)), np.zeros(model_image_k.shape)], axis=0)
             model_image_k = model_image_k
 
@@ -241,4 +242,5 @@ def unrolled_imager(vis, model_path, freq, uvw, npix_x, npix_y, cellsize, niter,
             plt.imshow(model_image_k)
             plt.show()
             
-    return np.abs(model_image_k)
+    return model_image_k
+    # return np.abs(model_image_k)
