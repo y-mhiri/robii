@@ -26,7 +26,8 @@ class ViDataset():
     def __getitem__(self,idx):
 
         return self.z["data/vis"][idx].reshape(1,-1), \
-                self.z["data/model_images"][idx].reshape(1,-1).astype(np.float64)
+                self.z["data/model_images"][idx].reshape(1,-1).astype(np.float64), \
+                self.z["data/dirty_images"][idx].reshape(1,-1).astype(np.float64)
 
     def __len__(self):
         return self.nimages
