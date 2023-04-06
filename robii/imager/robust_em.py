@@ -21,7 +21,7 @@ def robust_em_imager(vis, uvw, freq, cellsize, niter,
     nvis  =  len(vis)
     nfreq =  len(freq)
 
-    if model_image == None:
+    if model_image is None:
         model_image = ms2dirty(  
                                 uvw = uvw,
                                 freq = freq,
@@ -152,6 +152,6 @@ def robust_em_imager(vis, uvw, freq, cellsize, niter,
 
 
             
-    return np.abs(model_image_k)
+    return model_image_k
 
 
