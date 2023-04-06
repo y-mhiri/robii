@@ -201,17 +201,17 @@ def fromms(mspath, out, fits, image_size, cellsize, niter, threshold, model_path
 # command to make an image from a zarr dataset and specifying the number of images
 @robiinet.command()
 @click.argument('zarr', type=click.Path(exists=True))
-@click.option('--nimages', '-n', default=1, help='number of images to show')
-@click.option('--idx', '-i', default=-1, help='index of image to show')
-@click.option('--out', '-o', default='.', help='output directory')
-@click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
-@click.option('--image_size', '-s', default=None, help='image size')
-@click.option('--cellsize', '-c', default=None, help='cellsize in arcseconds')
-@click.option('--niter', '-i', default=10, help='number of iterations')
-@click.option('--miter', '-t', default=1, help='number of iterations for m step')
-@click.option('--mstep_size', '-m', default=1.0, help='step size for m step')
-@click.option('--threshold', '-t', default=0.1, help='threshold')
-@click.option('--model_path', '-p', default=None, help=' path to torch model')
+@click.option('--nimages', default=1, help='number of images to show')
+@click.option('--idx', default=-1, help='index of image to show')
+@click.option('--out', default='.', help='output directory')
+@click.option('--fits/--no_fits', default=False, help='save as fits')
+@click.option('--image_size', default=None, help='image size')
+@click.option('--cellsize', default=None, help='cellsize in arcseconds')
+@click.option('--niter', default=10, help='number of iterations')
+@click.option('--miter', default=1, help='number of iterations for m step')
+@click.option('--mstep_size', default=1.0, help='step size for m step')
+@click.option('--threshold', default=0.1, help='threshold')
+@click.option('--model_path', default=None, help=' path to torch model')
 def fromzarr(zarr, nimages, idx, out, fits, image_size, cellsize, niter, threshold, model_path, miter, mstep_size):
     
         # read ViSim object from zarr
@@ -229,7 +229,8 @@ def fromzarr(zarr, nimages, idx, out, fits, image_size, cellsize, niter, thresho
         npix_x, npix_y = image_size, image_size
     
         if idx == -1:
-            idx = np.random.randint(0, visim.ndata, nimages)
+            idx = np.random.choice(visim.ndata, nimages, replace=False)
+            print(idx)
         else:
             idx = [idx + i for i in range(nimages)]
     
@@ -271,7 +272,8 @@ def fromzarr(zarr, nimages, idx, out, fits, image_size, cellsize, niter, thresho
             plt.imshow(dirty_image, cmap='Spectral_r')
             plt.title('Dirty Image')
             plt.savefig(os.path.join(out, f'image_{i}.png'))
-            return True
+        
+        return True
 
 
 if __name__ == '__main__':
