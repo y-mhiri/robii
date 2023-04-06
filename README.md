@@ -1,6 +1,9 @@
-# ROBII: ROBust Interferometric Imaging Algorithm
+# ROBII: ROBust Interferometric Imaging Algorithm (in development)
 
-ROBII is a Python package for interferometric imaging that uses a robust statistical model method to solve the imaging problem. For more details on the methodology, please refere to y-mhiri.github.io/publications
+ROBII is a Python package for interferometric imaging that uses a robust statistical model method to solve the imaging problem.
+Additionnaly, ROBII includes RobiiNet, an unrolled deep neural network for radio-interferometric imaging based on the Robii algorithm.
+
+For more details on the methodology, please refere to y-mhiri.github.io/publications
 
 ## Requirements
 
@@ -70,7 +73,11 @@ Use Vagrant ([see here](https://www.vagrantup.com/)) to build a ubuntu-focal ima
 
 You can simulate a radio interferometric dataset using the following command 
 
-       $ generate_dataset simulate --ndata 10 --telescope vla --frequency 3.0e8 --npixel 128 --add_noise True --snr 20 --out /path/to/dataset/dataset_name
+       $ generate_dataset simulate --ndata 1000 --telescope vla --synthesis_time 1 --integration_time 60 --frequency 3.0e8 --npixel 128 --add_noise True --snr 20 --out /path/to/dataset/dataset_name
+
+### Train a RobiiNet Model 
+
+        $ train_model --dset_path /path/to/dataset --nepoche 100 --batch_size 64 --net_depth 10 --net_width 351 --learning_rate 0.001 --step 10 --model_name robiinet_trained --true_init 
 
 ### Make an image
 

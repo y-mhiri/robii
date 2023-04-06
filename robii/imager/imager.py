@@ -62,6 +62,17 @@ class Imager():
         if npix_y is None:
             npix_y = self.npix_y
 
+        # print shape of the inputs
+        print('Computing dirty image')
+        print(f'freq: {self.freq.shape}')
+        print(f'uvw: {self.uvw.shape}')
+        print(f'vis: {self.vis.shape}')
+        print(f'npix_x: {npix_x}')
+        print(f'npix_y: {npix_y}')
+        print(f'cellsize: {cellsize}')
+        
+        
+
         self.dirty = ms2dirty(  
                             uvw = self.uvw,
                             freq = self.freq,

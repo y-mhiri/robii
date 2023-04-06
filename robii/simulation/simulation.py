@@ -444,15 +444,26 @@ class ViSim():
         
         self.simulate(update_sky_images=False)
         
-    def compute_dirty_image(self, idx, npix_x=None, npix_y=None):
+    def compute_dirty_image(self, idx=0, vis=None, npix_x=None, npix_y=None):
 
         npix_x = self.npixel if npix_x is None else npix_x
         npix_y = self.npixel if npix_y is None else npix_y
 
-        dirty_image = ms2dirty(
+        if vis is None:
+            dirty_image = ms2dirty(
                     uvw = self.uvw,
                     freq = self.freq,
                     ms = self.vis[idx],
+                    npix_x = npix_x,
+                    npix_y = npix_y,
+                    pixsize_x = self.cellsize,
+                    pixsize_y = self.cellsize,
+                    epsilon=1.0e-7)
+        else:
+            dirty_image = ms2dirty(
+                    uvw = self.uvw,
+                    freq = self.freq,
+                    ms = vis,
                     npix_x = npix_x,
                     npix_y = npix_y,
                     pixsize_x = self.cellsize,
