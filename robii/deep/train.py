@@ -90,7 +90,7 @@ def test_on_sample_dataset(ndata, dataset, model_path):
 
 def train(dset_path, nepoch, batch_size, net_depth,
            net_width, learning_rate, step, out, model_name,
-             logpath, true_init=False, monitor=True):
+             logpath, threshold=1e-3, mstep_size=1, SNR=10, true_init=False, monitor=True):
         
     dataset = ViDataset(dset_path)
     npixel = dataset.npixel
@@ -150,10 +150,11 @@ def train(dset_path, nepoch, batch_size, net_depth,
         logprint(f"Epoch {epoch+1}\n-------------------------------", path=logpath)
         loss = model.train_supervised(train_dataloader, loss_fn, optimizer, device,
                                        true_init=true_init,
-                                       threshold=0.001,
+                                       threshold=threshold,
+                                       mstep_size=mstep_size,
                                        niter=net_depth,
                                        H=H,
-                                       npixel=npixel)
+                                       SNR=SNR)
         
         logprint(f"loss = {loss}", path=logpath)
         save_model(f"{model_name}_tmp", nepoch, model, optimizer, dset_path, model_name, loss, uvw, freq, out)
