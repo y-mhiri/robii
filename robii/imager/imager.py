@@ -91,7 +91,10 @@ class Imager():
                     )/self.nvis 
         
         if plot:
+            plt.figure(figsize=(8,8))
             plt.imshow(self.dirty, origin='lower', cmap='Spectral_r')
+            plt.colorbar()
+            plt.title('Dirty image')
             plt.show()
 
 
