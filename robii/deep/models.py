@@ -281,38 +281,53 @@ class RobiiNetV2(nn.Module):
             if true_init:
                 # std = np.sqrt(10**-(SNR/10) * torch.var(x))
                 # xtrain = x + torch.normal(0, std, size=x.shape, device=device)
+                alpha = 0.99
+                xtrain = alpha*x + (1-alpha)*xdirty
+
                 torch.autograd.set_detect_anomaly(True)
-                xtrain = xdirty
-                losses = []
-                for ii, alpha in enumerate(np.linspace(0.1, 1, 10)):
-
-
-                    if ii == 0:
-                        pred, tau = self(y, 
-                                    x0=xtrain.to(torch.cdouble),
-                                    H=H,
-                                    threshold=threshold, 
-                                    niter=niter, 
-                                    mstep_size=mstep_size)
-                    else:                    
-                        pred, tau = self(y, 
+                pred, tau = self(y, 
                                 x0=xtrain.to(torch.cdouble),
                                 H=H,
                                 threshold=threshold, 
                                 niter=niter, 
-                                mstep_size=mstep_size,
-                                tau=tau.detach())
+                                mstep_size=mstep_size)
+
+                loss = loss_fn(pred, x)
+                optimizer.zero_grad()   
+                loss.backward(retain_graph=False)
+
+                optimizer.step()
+
+
+                # for ii, alpha in enumerate(np.linspace(0.1, 1, 10)):
+
+
+                #     if ii == 0:
+                #         pred, tau = self(y, 
+                #                     x0=xtrain.to(torch.cdouble),
+                #                     H=H,
+                #                     threshold=threshold, 
+                #                     niter=niter, 
+                #                     mstep_size=mstep_size)
+                #     else:                    
+                #         pred, tau = self(y, 
+                #                 x0=xtrain.to(torch.cdouble),
+                #                 H=H,
+                #                 threshold=threshold, 
+                #                 niter=niter, 
+                #                 mstep_size=mstep_size,
+                #                 tau=tau.detach())
                         
-                    xtrain = alpha*x + (1-alpha)*xdirty
+                #     xtrain = alpha*x + (1-alpha)*xdirty
 
-                    loss = loss_fn(pred, xtrain).clone()
+                #     loss = loss_fn(pred, xtrain).clone()
 
 
 
-                    optimizer.zero_grad()   
-                    loss.backward(retain_graph=True)
+                #     optimizer.zero_grad()   
+                #     loss.backward(retain_graph=True)
 
-                    optimizer.step()
+                #     optimizer.step()
 
                     
             else:
