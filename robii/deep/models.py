@@ -182,7 +182,7 @@ class RobiiNet(nn.Module):
 
 class RobiiNetV2(nn.Module):
 
-    def __init__(self, net_width, alpha=None):
+    def __init__(self, net_width):
         super().__init__()
 
 
@@ -207,8 +207,8 @@ class RobiiNetV2(nn.Module):
     
 
 
-    def forward(self, y, H, threshold=1e-3, niter=10, x0=None, mstep_size=1, tau=None):
-
+    def forward(self, y, H, threshold=1e-3, niter=10, x0=None, mstep_size=1, tau=None, gaussian=False):
+        
         nvis = y.shape[2]
         batch_size = y.shape[0]
 
@@ -227,13 +227,24 @@ class RobiiNetV2(nn.Module):
             tau = torch.ones((batch_size, nblocks, self.net_width))
 
         for k in range(niter):
-              xk, tau = self.one_iteration(xk, y, H_tensor, tau, threshold=threshold, mstep_size=mstep_size)
+
+            # compute hessian for each H of H_tensor
+            # hessian = torch.zeros((nblocks, self.net_width, self.net_width), dtype=torch.cdouble)
+            # for bloc_index in range(H_tensor.shape[0]):
+            #     omega = torch.diag(tau[:, bloc_index, :].reshape(-1))
+            #     hessian[:, bloc_index, :, :] = torch.matmul(H_tensor[bloc_index, :, :].T,  H_tensor[bloc_index, :, :])
+
+
+
+            xk, tau = self.one_iteration(xk, y, H=H_tensor, tau=tau,
+                                            threshold=threshold, 
+                                            mstep_size=mstep_size, gaussian=gaussian)
 
         return torch.real(xk), tau
     
 
 
-    def one_iteration(self, xk, y, H, tau, threshold, mstep_size=1):
+    def one_iteration(self, xk, y, H, tau, threshold, mstep_size=1, gaussian=False):
 
         ## Apply encoder to estimated image
 
@@ -244,16 +255,19 @@ class RobiiNetV2(nn.Module):
         for bloc_index in range(H.shape[0]):
             H_bloc = H[bloc_index, :, :].clone()
             y_bloc = y[:, bloc_index, :].reshape(-1,1, self.net_width).clone()
-            zk = torch.matmul(xk, H_bloc.T)/dim
+            zk = torch.matmul(xk, H_bloc.T)
             ## Compute robust weight
             tau_bloc = tau[:, bloc_index].reshape(-1,1, self.net_width).clone()
-            tau_bloc = self.expectation_step((torch.abs(y_bloc - zk).real**2).to(torch.float), tau_bloc)
+            if gaussian:
+                tau_bloc = torch.ones_like(tau_bloc)
+            else:
+                tau_bloc = self.expectation_step((torch.abs(y_bloc - zk).real**2).to(torch.float), tau_bloc)
             new_tau[:, bloc_index] = tau_bloc.reshape(-1, self.net_width)
 
             ## M Step
             # for mit in range(miter):
             residual = mstep_size * torch.mul(y_bloc - zk , tau_bloc)
-            residual_image = torch.matmul(residual, H_bloc.conj())/self.net_width
+            residual_image = torch.matmul(residual, H_bloc.conj())/self.net_width/dim
             
 
             x += residual_image
@@ -281,10 +295,9 @@ class RobiiNetV2(nn.Module):
             if true_init:
                 # std = np.sqrt(10**-(SNR/10) * torch.var(x))
                 # xtrain = x + torch.normal(0, std, size=x.shape, device=device)
-                alpha = 0.99
+                alpha = 0.75
                 xtrain = alpha*x + (1-alpha)*xdirty
 
-                torch.autograd.set_detect_anomaly(True)
                 pred, tau = self(y, 
                                 x0=xtrain.to(torch.cdouble),
                                 H=H,
@@ -292,6 +305,12 @@ class RobiiNetV2(nn.Module):
                                 niter=niter, 
                                 mstep_size=mstep_size)
 
+                # loss = loss_fn(pred, xtrain) + loss_fn(tau, torch.zeros_like(tau))
+
+
+                # loss = 1e-4 * torch.norm( torch.multiply( torch.sqrt(tau.reshape(y.shape)) ,
+                #                                   y - torch.matmul(pred.to(torch.cdouble), H[0].T)), p='fro')**2 / y.shape[0] / y.shape[1] / y.shape[2] \
+                #                                  + loss_fn(pred, x)
                 loss = loss_fn(pred, x)
                 optimizer.zero_grad()   
                 loss.backward(retain_graph=False)
@@ -315,17 +334,17 @@ class RobiiNetV2(nn.Module):
                 #                 H=H,
                 #                 threshold=threshold, 
                 #                 niter=niter, 
-                #                 mstep_size=mstep_size,
-                #                 tau=tau.detach())
+                #                 mstep_size=mstep_size)
+                #                 # tau=tau.detach())
                         
                 #     xtrain = alpha*x + (1-alpha)*xdirty
 
-                #     loss = loss_fn(pred, xtrain).clone()
+                #     loss = loss_fn(pred, xtrain) + loss_fn(tau, torch.zeros_like(tau))
 
 
 
                 #     optimizer.zero_grad()   
-                #     loss.backward(retain_graph=True)
+                #     loss.backward(retain_graph=False)
 
                 #     optimizer.step()
 
@@ -343,6 +362,7 @@ class RobiiNetV2(nn.Module):
             # print('here')
             if batch % 1 == 0:
                 loss_val, current = loss.item(), batch * len(x)
-                print(f"loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
+                print(f"MSTEP loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
+                print(f"MSE: {loss_fn(pred, x):>7f}  [{current:>5d}/{size:>5d}]")
 
         return loss.item()
