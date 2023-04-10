@@ -2,7 +2,7 @@
 
 
 output_path=/workdir/mhiriy/robii/outputs
-folder_name=vla-snr100-n10-t.001-m.001-lr0.001
+folder_name=vla_test-thr0.0001-mstep0.001-lr0.0001
 
 out=$output_path/$folder_name
 cd $out
@@ -14,23 +14,23 @@ datasets_path=$out/datasets
 
 # Generate test dataset
 
-# generate_dataset simulate --ndata 10 \
-# --telescope vla \
-# --synthesis 8 \
-# --dtime 3600 \
-# --dec 'zenith' \
-# --npixel 128 \
-# --out $datasets_path/test \
-# --freq 1.4e9 \
-# --add_noise \
-# --snr 100 \
-# --add_compound \
-# --texture_distributions invgamma \
-# --dof_ranges 3 10 \
-# --texture_distributions gamma \
-# --dof_ranges .1 5 \
-# --texture_distributions invgauss \
-# --dof_ranges .5 1
+generate_dataset simulate --ndata 10 \
+--telescope vla \
+--synthesis 8 \
+--dtime 60 \
+--dec 'zenith' \
+--npixel 128 \
+--out $datasets_path/test \
+--freq 1.4e9 \
+--add_noise \
+--snr 20 \
+--add_compound \
+--texture_distributions invgamma \
+--dof_ranges 3 10 \
+--texture_distributions gamma \
+--dof_ranges .1 5 \
+--texture_distributions invgauss \
+--dof_ranges .5 1
 
 
 
@@ -41,8 +41,8 @@ robiinet fromzarr $datasets_path/test.zip \
 --out $out/test_output/images \
 --niter 10 \
 --miter 10 \
---mstep_size .001 \
---threshold 0.001 \
+--mstep_size 0.001 \
+--threshold 0.0001 \
 --model_path $out/train_output/robiinet_tmp.pth
 
 
