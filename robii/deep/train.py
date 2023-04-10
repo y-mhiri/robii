@@ -29,6 +29,7 @@ def logprint(msg, path):
 def save_model(filename, nepoch, model, optimizer, dset_path, model_name, loss, uvw, freq, out):
     return torch.save({
                     'epoch': nepoch,
+                    'net_width': model.net_width,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'dataset': dset_path,
