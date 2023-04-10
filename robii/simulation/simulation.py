@@ -227,6 +227,7 @@ class ViSim():
 
 
         model_images = root["data/model_images"][:]
+        dirty_images = root["data/dirty_images"][:]
         vis = root["data/vis"][:]
         clean_vis = root["data/clean_vis"][:]
         noise = root["data/noise"][:]
@@ -267,6 +268,7 @@ class ViSim():
                         rfi_array=rfi_array,
                         do_sim=do_sim,
                         model_images=model_images,
+                        dirty_images=dirty_images,
                         vis=vis,
                         clean_vis=clean_vis,
                         noise=noise,
