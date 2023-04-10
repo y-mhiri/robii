@@ -60,6 +60,7 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
         'gaussian': robust,
         'verbose': True,
         'plot': plot,
+        'save_fits': fits,
         'out': out
     }
 
