@@ -131,6 +131,7 @@ def robust_em_imager(vis, uvw, freq, cellsize, niter,
                                 uvw = uvw,
                                 freq = freq,
                                 ms = residual.reshape(-1,len(freq)),
+                                wgt = expected_tau, # apply weights tp get the hessian for this particular iteration
                                 npix_x = npix_x,
                                 npix_y = npix_y,
                                 pixsize_x = cellsize,
