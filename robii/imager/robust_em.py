@@ -6,11 +6,15 @@ from torchvision.transforms import ToTensor
 import torch
 
 import matplotlib.pyplot as plt
+from astropy.io import fits
+
+import os
+
 
 def robust_em_imager(vis, uvw, freq, cellsize, niter, 
                 model_image=None, npix_x=32, npix_y=32, 
                 dof=10, threshold=0.01, gaussian=False, mstep_size=1,
-                miter=1, verbose=False, plot=False, out='out'):
+                miter=1, verbose=False, plot=False, save_fits=False, out='out'):
 
     """
     The product by the model matrix or its adjoint is done with dirty2ms and ms2dirty
@@ -138,16 +142,24 @@ def robust_em_imager(vis, uvw, freq, cellsize, niter,
                 print('Updating model image')
 
             model_image_k = model_image_k + mstep_size*residual_image
-            model_image_k = np.sign(model_image_k) * np.max([np.abs(model_image_k)- threshold*np.max(np.abs(model_image_k)), np.zeros(model_image_k.shape)], axis=0)
+            model_image_k = np.sign(model_image_k) * np.max([np.abs(model_image_k)- threshold, np.zeros(model_image_k.shape)], axis=0)
+            # model_image_k = np.sign(model_image_k) * np.max([np.abs(model_image_k)- threshold*np.max(np.abs(model_image_k)), np.zeros(model_image_k.shape)], axis=0)
             # model_image_k = np.abs(model_image_k)
 
             if plot:
-                plt.figure()
-                plt.title('Model image')
-                plt.imshow(model_image_k)
-                plt.colorbar()
-                plt.show()
-                # plt.imsave(f'{out}_tmp.png', model_image_k, origin='lower', cmap='Spectral_r')
+                # plt.figure()
+                # plt.title('Model image')
+                # plt.imshow(model_image_k)
+                # plt.colorbar()
+                # plt.show()
+                if save_fits:
+                    hdu = fits.PrimaryHDU(self.image)
+                    if os.path.exists(filename):
+                        hdu.writeto(filename, overwrite=True)
+                    else:
+                        hdu.writeto(filename, overwrite=False)
+
+                plt.imsave(f'{out}_tmp.png', model_image_k, origin='lower', cmap='viridis')
 
 
 
