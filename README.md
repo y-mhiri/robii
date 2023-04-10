@@ -79,11 +79,16 @@ You can simulate a radio interferometric dataset using the following command
 
         $ train_model --dset_path /path/to/dataset --nepoche 100 --batch_size 64 --net_depth 10 --net_width 351 --learning_rate 0.001 --step 10 --model_name robiinet_trained --true_init 
 
-### Make an image
+### Make an image from 
 
-ROBII can create an image from a zarr file using the robii fromzarr command. Here's an example:
+ROBII can create an image from a zarr file containing a radio interferometric dataset dataset using the robii fromzarr command. Here's an example:
 
         $ robii fromzarr data.zarr -n 3 --out images --niter 10 --threshold 0.001 --dof 10
+
+ROBII can create an image from an MS file using the robii __fromms__ command. The support for measurement set is still in progress and some issues can occur. The command is currently set to make an image from a unique spectral window. The robii imager can be tested on the measurement set from the Very Large Array telescope available [here](https://casaguides.nrao.edu/index.php?title=VLA_CASA_Imaging-CASA6.5.2). 
+
+        $ robii fromms /path/to/ms robii fromms /path/to/ms --out path/to/out/filename --image_size 1280 --niter 10 --miter 10 --mstep_size 0.000005 --threshold 0.00001 --dof 10 --plot --fits
+
 
 
 
