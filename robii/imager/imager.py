@@ -40,8 +40,8 @@ class Imager():
 
     
     @classmethod
-    def from_ms(cls, ms, cellsize, npix_x, npix_y):
-        # print info 
+    def from_ms(cls, ms, cellsize, npix_x, npix_y, spw_id=1, corr_type='RR-LL'):
+
         ms = MS(ms)
 
         cellsize = cellsize / 3600 * np.pi / 180
@@ -49,12 +49,14 @@ class Imager():
         print(ms.vis_data.shape)
 
         vis = ms.vis_data
-        stokeI_vis = (vis[:, :, 0] + vis[:, :, 1])/2
 
-        spw_id = 1
+        if corr_type == 'RR-LL':
+            stokeI_vis = (vis[:, :, 0] + vis[:, :, 1])/2
+            
+
         stokeI_vis = stokeI_vis[ms.data_desc_id == spw_id]
         uvw = ms.uvw[ms.data_desc_id == spw_id]
-        freq = np.array([ms.chan_freq[spw_id, :]]).reshape(-1)
+        freq = ms.chan_freq[spw_id, :]
 
         return cls(stokeI_vis, freq, uvw, cellsize, npix_x, npix_y)
     
@@ -120,6 +122,7 @@ class Imager():
                                          npix_x=npix_x, 
                                          npix_y=npix_y, 
                                          **kwargs)
+            # self.image = np.max(0, self.image)
 
         elif method == 'robii':
             self.image = robust_em_imager(vis=self.vis, 
@@ -129,9 +132,11 @@ class Imager():
                                           npix_x=npix_x, 
                                           npix_y=npix_y, 
                                           **kwargs)
+            # self.image = np.max(0, self.image)
         else:
             raise ValueError('Method not implemented')
         
+
         return self.image
     
     def save_image(self, filename, save_fits=False, overwrite=True):
