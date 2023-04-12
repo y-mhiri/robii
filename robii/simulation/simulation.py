@@ -98,6 +98,8 @@ class ViSim():
         # Compute the maximum cellsize
         self.cellsize = np.min(self.wl)/(np.max(self.uvw)*2)
 
+        # compute dirty beam 
+        self.dirty_beam = self.compute_dirty_beam(npixel=npixel, cellsize=self.cellsize, freq=self.freq)
 
         self.noise_kwargs = {
             'add_noise': add_noise,
@@ -112,7 +114,7 @@ class ViSim():
             'std_calibration_error': std_calibration_error
         }
 
-    
+
         # Define the noise parameters
         self.add_noise = add_noise
         self.snr = snr
@@ -388,6 +390,7 @@ class ViSim():
 
     def __len__(self):
         return self.ndata
+    
 
     def set_texture_distributions(self, texture_distributions):
         self.texture_distributions = [item for key,item in self.distributions.items()
@@ -447,6 +450,25 @@ class ViSim():
                 self.model_images[ii] = img
         
         self.simulate(update_sky_images=False)
+    
+    def compute_dirty_beam(self, npixel=None, cellsize=None, freq=None):
+
+        npixel = self.npixel if npixel is None else npixel
+        cellsize = self.cellsize if cellsize is None else cellsize
+        freq = self.freq if freq is None else freq
+
+        return ms2dirty(
+                uvw = self.uvw,
+                freq = freq,
+                ms = np.ones((self.nvis, 1)).astype(np.complex64),
+                npix_x = npixel,
+                npix_y = npixel,
+                pixsize_x = cellsize,
+                pixsize_y = cellsize,
+                epsilon=1.0e-5)/self.nvis
+    
+
+
         
     def compute_dirty_image(self, idx=0, vis=None, npix_x=None, npix_y=None):
 
