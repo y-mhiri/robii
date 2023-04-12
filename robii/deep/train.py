@@ -93,7 +93,7 @@ def train(dset_path, nepoch, batch_size, net_depth,
            net_width, learning_rate, step, out, model_name,
              logpath, threshold=1e-3, mstep_size=1, SNR=10, true_init=False, monitor=True):
         
-    dataset = ViDataset(dset_path)
+    dataset = ViDataset.from_zarr(dset_path)
     npixel = dataset.npixel
     uvw = dataset.uvw
     nvis = uvw.shape[0]
