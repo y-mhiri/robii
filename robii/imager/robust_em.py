@@ -25,6 +25,14 @@ def robust_em_imager(vis, uvw, freq, cellsize, niter,
     nvis  =  len(vis)
     nfreq =  len(freq)
 
+    lipschitz_constant = nvis * npix_x * npix_y  # The forward operator matrix H have Lipschitz constant equal to nvis * npix_x * npix_y (Tr(H^H @ H) = nvis * npix_x * npix_y)
+    if mstep_size is None:
+        mstep_size = 1/lipschitz_constant
+    
+    if mstep_size > 1/lipschitz_constant:
+        raise Warning('mstep_size is too large. It should be less than 1/lipschitz_constant = {}'.format(1/lipschitz_constant))
+
+
     if model_image is None:
         model_image = ms2dirty(  
                                 uvw = uvw,
@@ -155,10 +163,10 @@ def robust_em_imager(vis, uvw, freq, cellsize, niter,
                 # plt.show()
                 if save_fits:
                     hdu = fits.PrimaryHDU(self.image)
-                    if os.path.exists(filename):
-                        hdu.writeto(filename, overwrite=True)
+                    if os.path.exists(f'{out}_tmp.fits'):
+                        hdu.writeto(f'{out}_tmp.fits', overwrite=True)
                     else:
-                        hdu.writeto(filename, overwrite=False)
+                        hdu.writeto(f'{out}_tmp.fits', overwrite=False)
 
                 plt.imsave(f'{out}_tmp.png', model_image_k, origin='lower', cmap='viridis')
 
