@@ -37,7 +37,7 @@ class ViSim():
                  texture_distributions=None, 
                  dof_ranges=None,
                  add_rfi=False, 
-                 rfi_array=RFI(1), 
+                 rfi_array=[RFI(1)], 
                  add_calibration_error=False,
                  std_calibration_error=0.1,
                  model_images=None,
@@ -580,7 +580,7 @@ class ViSim():
 
         return vis_rfi, rfi_gains
 
-    def simulate(self, ndata=None, update_sky_images=True, verbose=False, rng=np.random.default_rng()):
+    def simulate(self, ndata=None, update_sky_images=True, sources=None, verbose=False, rng=np.random.default_rng()):
 
         if verbose:
             print("Simulating data...")
@@ -611,14 +611,13 @@ class ViSim():
                 print("Simulating sky image...")
 
             if update_sky_images:
-                self.model_images[n] = self.simulate_sky_image().squeeze() #squeeze frequency dimension
+                self.model_images[n] = self.simulate_sky_image(sources=sources).squeeze() #squeeze frequency dimension
 
             if verbose:
                 print("Simulating noise-free visibilities...")
 
 
             self.clean_vis[n] = self.simulate_noise_free_visibilities(self.model_images[n])
-            self.dirty_images[n] = self.compute_dirty_image(vis=self.clean_vis[n])
 
             self.calibration_gains[n] = np.ones_like(self.clean_vis[n])
 
@@ -644,6 +643,8 @@ class ViSim():
 
                     texture = self.simulate_texture_noise(self.dof_ranges, rng=rng)
                     self.noise[n] = texture * speckle
+                else:
+                    self.noise[n] = speckle
 
                 self.vis[n] += self.noise[n]
 
@@ -654,6 +655,8 @@ class ViSim():
 
                 self.vis_rfi[n],_ = self.simulate_rfi_visibilities(self.rfi_array, rng=rng)
                 self.vis[n] += self.vis_rfi[n]
+
+            self.dirty_images[n] = self.compute_dirty_image(vis=self.vis[n])
 
         return self.model_images, self.dirty_images, self.clean_vis, self.vis, self.vis_rfi,self.noise, self.calibration_gains
 
