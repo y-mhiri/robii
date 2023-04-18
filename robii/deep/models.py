@@ -29,6 +29,9 @@ def forward_operator(uvw, freq, npixel, cellsize=None):
     # fov = cellsize*npixel
     lmn = generate_directions(npixel, cellsize).reshape(3,-1)
     uvw = uvw.reshape(-1,3)
+    # add conjugate
+    uvw = np.concatenate((uvw, -uvw), axis=0)
+
 
     return np.exp(-1j*(2*np.pi/np.min(wl))* uvw @ lmn)
 
@@ -41,7 +44,7 @@ class RobiiNet(nn.Module):
 
         H = forward_operator(uvw, freq, npixel)
         nvis, npix2 = H.shape
-        self.nvis = nvis
+        self.nvis = nvis 
 
 
         # layers that should not be trained
@@ -199,8 +202,29 @@ class RobiiNetV2(nn.Module):
         for param in self.memory_layer.parameters():
             self.trainable_robust.append(param)
 
+        # init layers to identity
+        self.estep.weight.data = torch.eye(self.net_width)
+        self.estep.bias.data = torch.zeros(self.net_width)
+        self.update_layer.weight.data = torch.eye(self.net_width)
+        self.memory_layer.weight.data = 0.000001*torch.eye(self.net_width)
+
+        # do not learn estep weights
+        # self.estep.weight.requires_grad_(False)
+        self.estep.bias.requires_grad_(False)
+
+        # self.update_layer.weight.requires_grad_(False)
+        self.update_layer.bias.requires_grad_(False)
+
+        # self.memory_layer.weight.requires_grad_(False)
+        self.memory_layer.bias.requires_grad_(False)
 
     def expectation_step(self, xt, wprev):
+
+        # normalize by variance
+        xt = xt / torch.std(xt)
+
+        # create random normal input
+        # ht = nn.Sigmoid()(-self.estep(torch.log(xt)))
         ht = nn.Sigmoid()(self.estep(xt))
         wnew = nn.ReLU()(self.update_layer(ht) + self.memory_layer(wprev))
         return wnew
@@ -209,6 +233,9 @@ class RobiiNetV2(nn.Module):
 
     def forward(self, y, H, threshold=1e-3, niter=10, x0=None, mstep_size=1, tau=None, gaussian=False):
         
+        # include conjugate visiblities
+        y = torch.cat((y, torch.conj(y)), dim=2)
+
         nvis = y.shape[2]
         batch_size = y.shape[0]
 
@@ -264,9 +291,11 @@ class RobiiNetV2(nn.Module):
                 tau_bloc = self.expectation_step((torch.abs(y_bloc - zk).real**2).to(torch.float), tau_bloc)
             new_tau[:, bloc_index] = tau_bloc.reshape(-1, self.net_width)
 
+            sigma2 = torch.mean(torch.abs(y_bloc - zk)**2, dim=2).reshape(-1,1,1)
+            # print(sigma2.shape)
             ## M Step
             # for mit in range(miter):
-            residual = mstep_size * torch.mul(y_bloc - zk , tau_bloc)
+            residual = mstep_size * torch.mul(y_bloc - zk , tau_bloc)/sigma2
             residual_image = torch.matmul(residual, H_bloc.conj())/self.net_width/dim
             
 
@@ -295,7 +324,7 @@ class RobiiNetV2(nn.Module):
             if true_init:
                 # std = np.sqrt(10**-(SNR/10) * torch.var(x))
                 # xtrain = x + torch.normal(0, std, size=x.shape, device=device)
-                alpha = 0.75
+                alpha = 0.9
                 xtrain = alpha*x + (1-alpha)*xdirty
 
                 pred, tau = self(y, 
@@ -305,15 +334,12 @@ class RobiiNetV2(nn.Module):
                                 niter=niter, 
                                 mstep_size=mstep_size)
 
-                # loss = loss_fn(pred, xtrain) + loss_fn(tau, torch.zeros_like(tau))
 
 
-                # loss = 1e-4 * torch.norm( torch.multiply( torch.sqrt(tau.reshape(y.shape)) ,
-                #                                   y - torch.matmul(pred.to(torch.cdouble), H[0].T)), p='fro')**2 / y.shape[0] / y.shape[1] / y.shape[2] \
-                #                                  + loss_fn(pred, x)
+
                 loss = loss_fn(pred, x)
                 optimizer.zero_grad()   
-                loss.backward(retain_graph=False)
+                loss.backward(retain_graph=True)
 
                 optimizer.step()
 
@@ -362,7 +388,6 @@ class RobiiNetV2(nn.Module):
             # print('here')
             if batch % 1 == 0:
                 loss_val, current = loss.item(), batch * len(x)
-                print(f"MSTEP loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
-                print(f"MSE: {loss_fn(pred, x):>7f}  [{current:>5d}/{size:>5d}]")
+                print(f"loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
 
         return loss.item()
