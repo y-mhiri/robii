@@ -30,6 +30,8 @@ class ViSim():
                  synthesis_time = 0,
                  integration_time = 0,
                  dec='zenith',
+                 fov=1.0,
+                 
                  freq=np.array([3e8]),
                  add_noise=False, 
                  snr=100, 
