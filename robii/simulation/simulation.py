@@ -26,12 +26,14 @@ class ViSim():
     def __init__(self, 
                  ndata=1,
                  npixel=64, 
+                 sources_density=1,
+                 sources_power=[0,1],
+                 sources_scale=[0.1,1],
                  telescope='vla', 
                  synthesis_time = 0,
                  integration_time = 0,
                  dec='zenith',
-                 fov=1.0,
-                 
+                 cellsize=None,
                  freq=np.array([3e8]),
                  add_noise=False, 
                  snr=100, 
@@ -57,6 +59,7 @@ class ViSim():
 
         self.rng = rng
         self.ndata = ndata
+
         self.telescope = telescope
         self.synthesis_time = synthesis_time
         self.integration_time = integration_time
@@ -98,7 +101,12 @@ class ViSim():
         self.uvw[:,-1] = 0
 
         # Compute the maximum cellsize
-        self.cellsize = np.min(self.wl)/(np.max(self.uvw)*2)
+
+        self.cellsize_max = np.min(self.wl)/(np.max(np.abs(self.uvw))*2)
+        if cellsize is None:
+            self.cellsize = self.cellsize_max
+        else:
+            self.cellsize = cellsize
 
         # compute dirty beam 
         self.dirty_beam = self.compute_dirty_beam(npixel=npixel, cellsize=self.cellsize, freq=self.freq)
@@ -151,6 +159,10 @@ class ViSim():
         self.std_calibration_error = std_calibration_error
 
         self.npixel = npixel
+        self.sources_density = sources_density
+        self.sources_power = sources_power
+        self.sources_scale = sources_scale
+        
 
         print('Initializing simulation')
         print('-----------------------')
@@ -472,10 +484,11 @@ class ViSim():
 
 
         
-    def compute_dirty_image(self, idx=0, vis=None, npix_x=None, npix_y=None):
+    def compute_dirty_image(self, idx=0, vis=None, npix_x=None, npix_y=None, cellsize=None):
 
         npix_x = self.npixel if npix_x is None else npix_x
         npix_y = self.npixel if npix_y is None else npix_y
+        cellsize = self.cellsize if cellsize is None else cellsize
 
         if vis is None:
             dirty_image = ms2dirty(
@@ -484,8 +497,8 @@ class ViSim():
                     ms = self.vis[idx],
                     npix_x = npix_x,
                     npix_y = npix_y,
-                    pixsize_x = self.cellsize,
-                    pixsize_y = self.cellsize,
+                    pixsize_x = cellsize,
+                    pixsize_y = cellsize,
                     epsilon=1.0e-7)/self.nvis
         else:
             dirty_image = ms2dirty(
@@ -494,8 +507,8 @@ class ViSim():
                     ms = vis,
                     npix_x = npix_x,
                     npix_y = npix_y,
-                    pixsize_x = self.cellsize,
-                    pixsize_y = self.cellsize,
+                    pixsize_x = cellsize,
+                    pixsize_y = cellsize,
                     epsilon=1.0e-7)/self.nvis
         
         return dirty_image
@@ -503,9 +516,9 @@ class ViSim():
     def simulate_sky_image(self, sources=None, add_noise=False, rng=np.random.default_rng()):
 
         if sources is None:
-            nsources = np.random.poisson(20)
-            power = np.random.uniform(0.5, 10, nsources)
-            scale = np.random.uniform(5, 25, (nsources, 2))
+            nsources = np.random.poisson(self.sources_density)
+            power = np.random.uniform(self.sources_power[0], self.sources_power[1], nsources)
+            scale = np.random.uniform(self.sources_scale[0], self.sources_scale[1], (nsources, 2))
             center = np.random.randint(-self.npixel//2, self.npixel//2, (nsources, 2))
             sources = [Source(center=c, power=p, scale=s) for c,p,s in zip(center, power, scale)]
         else:
@@ -520,14 +533,16 @@ class ViSim():
         return sky_image
         # return generate_sky_model(self.npixel, rng=rng).squeeze()
 
-    def simulate_noise_free_visibilities(self, model_image):
+    def simulate_noise_free_visibilities(self, model_image, cellsize=None):
+
+        cellsize = self.cellsize if cellsize is None else cellsize
         
         return dirty2ms(
                     uvw = self.uvw,
                     freq = self.freq,
                     dirty = model_image,
-                    pixsize_x = self.cellsize,
-                    pixsize_y = self.cellsize,
+                    pixsize_x = cellsize,
+                    pixsize_y = cellsize,
                     epsilon=1.0e-7)
     
     def simulate_calibration_gains(self, std=1):
