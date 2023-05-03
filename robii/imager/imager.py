@@ -4,15 +4,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ducc0.wgridder import ms2dirty, dirty2ms
-from .robust_em import robust_em_imager
+from .em_imager import em_imager, ista
+from .clean_from_vis import clean_from_vis
 from .unrolled import unrolled_imager
+from ..deep.models import forward_operator
+
+from ..arl.clean import deconvolve_cube
 
 from astropy.io import fits
 import os
 
 class Imager():
 
-    def __init__(self, vis, freq, uvw, cellsize, npix_x, npix_y, verbose=True):
+    def __init__(self, vis, freq, uvw, cellsize, npix_x, npix_y, wgt=None, verbose=True):
 
         self.cellsize = cellsize
         self.npix_x = npix_x
@@ -28,6 +32,8 @@ class Imager():
         self.model_vis = None
         self.residual = None
         self.residual_image = None
+
+        self.wgt = wgt
 
         # print info about the data
         if verbose:
@@ -49,10 +55,15 @@ class Imager():
         print(ms.vis_data.shape)
 
         vis = ms.vis_data
+        wgt = ms.weight #[ms.data_desc_id == spw_id]
+
+        # extend the weight to the number of channels
+        wgt = np.repeat(wgt.reshape(-1,2, 1), ms.nb_chan, axis=-1)
 
         if corr_type == 'RR-LL':
-            stokeI_vis = (vis[:, :, 0] + vis[:, :, 1])/2
-            
+            stokeI_vis = (vis[:, :, 0]*wgt[:,0] + vis[:, :, 1]*wgt[:,1])/2
+            # stokeI_vis = (vis[:, :, 0] + vis[:, :, 1])/2
+
 
         stokeI_vis = stokeI_vis[ms.data_desc_id == spw_id]
         uvw = ms.uvw[ms.data_desc_id == spw_id]
@@ -80,17 +91,20 @@ class Imager():
         print(f'cellsize: {cellsize}')
         
         
+        wgt = self.wgt if self.wgt is not None else np.ones(self.nvis)
+
 
         self.dirty = ms2dirty(  
                             uvw = self.uvw,
                             freq = self.freq,
-                            ms = self.vis,
+                            ms = self.vis.astype(np.complex64),
+                            # do_wstacking = True,
                             npix_x = npix_x,
                             npix_y = npix_y,
                             pixsize_x = cellsize,
                             pixsize_y = cellsize,
                             epsilon=1.0e-5 
-                    )/self.nvis 
+        )
         
         if plot:
             plt.figure(figsize=(8,8))
@@ -103,7 +117,7 @@ class Imager():
         return self.dirty
     
 
-    def make_image(self, cellsize=None, npix_x=None, npix_y=None, method='dirty', **kwargs):
+    def make_image(self, init=None, niter=10, dof=10, cellsize=None, npix_x=None, npix_y=None, method='dirty', useducc=True, params=None):
 
         if cellsize is None:
             cellsize = self.cellsize
@@ -112,30 +126,85 @@ class Imager():
         if npix_y is None:
             npix_y = self.npix_y
 
+
+        if useducc:
+            adjoint = lambda vis : ms2dirty(  
+                            uvw = self.uvw,
+                            freq = self.freq,
+                            ms = vis.reshape(-1,len(self.freq)),
+                            npix_x = npix_x,
+                            npix_y = npix_y,
+                            pixsize_x = cellsize,
+                            pixsize_y = cellsize,
+                            epsilon=1.0e-5 
+                    )
+            
+            forward = lambda x : dirty2ms(  
+                        uvw = self.uvw,
+                        freq = self.freq,
+                        dirty = x,
+                        pixsize_x = cellsize,
+                        pixsize_y = cellsize,
+                        epsilon=1.0e-5 
+                        ).reshape(-1)
+            
+        else:
+
+                H = forward_operator(self.uvw, self.freq, npix_x, cellsize=cellsize)
+
+                adjoint = lambda vis : H.T.conj().dot(vis.flatten()).reshape(int(np.sqrt(H.shape[1])), int(np.sqrt(H.shape[1])))
+                forward = lambda x : H.dot(x.flatten()).reshape(-1)
+            
+        ops = (forward, adjoint)
+
+
         if method == 'dirty':
             self.image = self.make_dirty(cellsize, npix_x, npix_y)
-        elif method == 'robiinet':
-            self.image = unrolled_imager(vis=self.vis, 
-                                         freq=self.freq, 
-                                         uvw=self.uvw, 
-                                         cellsize=cellsize, 
-                                         npix_x=npix_x, 
-                                         npix_y=npix_y, 
-                                         **kwargs)
+        # elif method == 'robiinet':
+        #     self.image = unrolled_imager(vis=self.vis, 
+        #                                  freq=self.freq, 
+        #                                  uvw=self.uvw, 
+        #                                  cellsize=cellsize, 
+        #                                  npix_x=npix_x, 
+        #                                  npix_y=npix_y, 
+        #                                  **kwargs)
             # self.image = np.max(0, self.image)
 
-        elif method == 'robii':
-            self.image = robust_em_imager(vis=self.vis, 
-                                          freq=self.freq, 
-                                          uvw=self.uvw, 
-                                          cellsize=cellsize, 
-                                          npix_x=npix_x, 
-                                          npix_y=npix_y, 
-                                          **kwargs)
+        elif method == 'ista':
+
+
+            self.image = em_imager(vis=self.vis,
+                                   ops=ops,
+                                   niter=niter,
+                                   dof= dof,
+                                   mstep_solver=ista,
+                                   params=params,
+                                   init=init)
+            
+        elif method == 'clean':
+            self.image = em_imager(vis=self.vis,
+                                   ops=ops,
+                                   niter=niter,
+                                   dof= dof,
+                                   mstep_solver=clean_from_vis,
+                                   params=params,
+                                   init=init)
+
+    
+            # self.image = em_imager(vis=self.vis, 
+                                        #   freq=self.freq, 
+                                        #   uvw=self.uvw, 
+                                        #   cellsize=cellsize, 
+                                        #   npix_x=npix_x, 
+                                        #   npix_y=npix_y, 
+                                        #   **kwargs)
             # self.image = np.max(0, self.image)
         else:
             raise ValueError('Method not implemented')
         
+        # self.image = self.image.T
+        # #invert y axis
+        # self.image = self.image[::-1, :]
 
         return self.image
     
