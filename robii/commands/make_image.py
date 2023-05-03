@@ -39,9 +39,10 @@ def robii():
 @click.option('--threshold', '-t', default=.0001, help='threshold')
 @click.option('--dof', '-d', default=10.0, help='degrees of freedom')
 @click.option('--robust/--gaussian', default=True)
+@click.option('--dirty/--no_dirty', default=False, help='compute dirty image only')
 @click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
 @click.option('--plot/--no-plot', '-p', default=False, help='plot')
-def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, threshold, dof, robust, fits, plot):
+def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, threshold, dof, robust, dirty, fits, plot):
     """
     Make an image from a measurement set
     """
@@ -51,6 +52,13 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
     npix_x, npix_y = image_size, image_size
     imager = Imager.from_ms(mspath, cellsize=cellsize, npix_x=npix_x, npix_y=npix_y)
     
+    if dirty:
+        imager.make_image(method='dirty')
+        ext = 'fits' if fits else 'png'
+        imager.save_image(f'{out}.{ext}', save_fits=fits)
+
+        return True
+
     kwargs = {
         'niter': niter,
         'miter': miter,
@@ -64,8 +72,8 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
         'out': out
     }
 
-
     imager.make_image(method='robii', **kwargs)
+        
 
     ext = 'fits' if fits else 'png'
     imager.save_image(f'{out}.{ext}', save_fits=fits)
