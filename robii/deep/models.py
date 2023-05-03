@@ -30,8 +30,8 @@ def forward_operator(uvw, freq, npixel, cellsize=None):
     lmn = generate_directions(npixel, cellsize).reshape(3,-1)
     uvw = uvw.reshape(-1,3)
     # add conjugate
-    uvw = np.concatenate((uvw, -uvw), axis=0)
-
+    # uvw = np.concatenate((uvw, -uvw), axis=0)
+    # print(uvw.shape)
 
     return np.exp(-1j*(2*np.pi/np.min(wl))* uvw @ lmn)
 
