@@ -175,9 +175,10 @@ def em_imager_old(vis, uvw, freq, cellsize, niter,
     return model_image_k
 
 
+def student_estep(residual, sigma2, dof):
+    return (dof + 1)/(dof + (1/sigma2) * np.linalg.norm(residual.reshape(1,-1), axis=0)**2)
 
-
-def em_imager(vis, ops, niter, dof, params, mstep_solver, init=None):
+def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, init=None):
 
     
     forward, backward  = ops
@@ -196,10 +197,10 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, init=None):
 
         ## Compute expected weights
         sigma2 = (1/len(vis.reshape(-1))) * np.linalg.norm(residual)**2
-        expected_weights = (dof + 1)/(dof + (1/sigma2) * np.linalg.norm(residual.reshape(1,-1), axis=0)**2)
+        expected_weights = estep(residual, sigma2, dof)
 
         ## M step
-        print(expected_weights)
+        # print(expected_weights)
         model_vis = np.multiply(expected_weights.reshape(-1), vis.reshape(-1))
         model_image_k = mstep_solver(model_vis, ops, init=model_image_k, **params)
 
@@ -207,7 +208,7 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, init=None):
 
 
 
-def ista(y, ops, niter, threshold, init=None, step_size=None, lipshitz=None, fista=False):
+def ista(y, ops, niter, threshold, init=None, step_size=None, decay=1, lipshitz=None, fista=False):
     """
         Solves the LASSO regression problem,
         $$
@@ -241,6 +242,12 @@ def ista(y, ops, niter, threshold, init=None, step_size=None, lipshitz=None, fis
 
     forward, backward  = ops
 
+    # def Q(L, xk, xkm1):
+    #     return np.linalg.norm(y - forward(xkm1))**2 + L/2 * np.linalg.norm(xk - xkm1)**2 + threshold * np.linalg.norm(xk, ord=1) + ((xk - xkm1).reshape(1,-1) @ backward(y - forward(xkm1)).reshape(-1,1))[0]
+
+    # def F(xk):
+    #     return np.linalg.norm(y - forward(xk))**2 + threshold * np.linalg.norm(xk, ord=1)
+
     if step_size is None and lipshitz is not None:
         step_size = 1/lipshitz
     elif step_size is None and lipshitz is None:
@@ -250,7 +257,7 @@ def ista(y, ops, niter, threshold, init=None, step_size=None, lipshitz=None, fis
 
     # x = np.zeros(y.shape)
     if init is None:
-        x = backward (y)
+        x = backward(y)
     else:
         x = init
 
@@ -258,12 +265,29 @@ def ista(y, ops, niter, threshold, init=None, step_size=None, lipshitz=None, fis
 
     x_temp = x
     xkm1 = x
+    xk = x
     for it in range(niter):
         # Perform ISTA update
-        
+
         r = y.reshape(-1) - forward(x_temp)
-        xk = x_temp + step_size * backward(r)
-        xk = np.sign(xk) * np.max([np.abs(xk) - threshold, np.zeros(xk.shape)], axis=0)
+        xk = x_temp + decay*step_size * backward(r)
+
+        if lipshitz is not None:
+            xk = np.sign(xk) * np.max([np.abs(xk) - (threshold/lipshitz), np.zeros(xk.shape)], axis=0)
+        else:
+            xk = np.sign(xk) * np.max([np.abs(xk) - threshold, np.zeros(xk.shape)], axis=0)
+
+        # count = 0
+        # while F(xk) > Q(step_size, xk, x_temp):
+        #     step_size = step_size*1,1
+        #     r = y.reshape(-1) - forward(x_temp)
+        #     xk = x_temp + decay*step_size * backward(r)
+        #     xk = np.sign(xk) * np.max([np.abs(xk) - threshold, np.zeros(xk.shape)], axis=0)
+        #     count += 1
+        #     print(step_size, count)
+        #     if count > 100:
+        #         print('Step size too small')
+        #         break
 
         if fista:
             tkp1 = (1 + np.sqrt(1 + 4*tk**2))/2
