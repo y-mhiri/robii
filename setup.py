@@ -22,6 +22,7 @@ setuptools.setup(
                      'python-casacore==3.5.1',
                      'omegaconf==2.3.0',
                      'pandas==1.5.3',
+                     'reproject==0.10.0',
                      'opencv-python==4.7.0.72'],
     entry_points={
             'console_scripts': [
