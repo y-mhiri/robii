@@ -26,9 +26,11 @@ class ViSim():
     def __init__(self, 
                  ndata=1,
                  npixel=64, 
-                 sources_density=1,
-                 sources_power=[0,1],
-                 sources_scale=[0.1,1],
+                 sources_params={
+                                    'sources_density' : 1,
+                                    'sources_power' : [2.5, 3.5],
+                                    'sources_scale' : [5, 20],
+                                    'sources_component' : 'gaussian'},
                  telescope='vla', 
                  synthesis_time = 0,
                  integration_time = 0,
@@ -159,10 +161,11 @@ class ViSim():
         self.std_calibration_error = std_calibration_error
 
         self.npixel = npixel
-        self.sources_density = sources_density
-        self.sources_power = sources_power
-        self.sources_scale = sources_scale
-        
+        self.sources_density = sources_params['sources_density']
+        self.sources_component = sources_params['sources_component']
+        self.sources_power = sources_params['sources_power']
+        self.sources_scale = sources_params['sources_scale']
+
 
         print('Initializing simulation')
         print('-----------------------')
@@ -520,7 +523,10 @@ class ViSim():
             power = np.random.uniform(self.sources_power[0], self.sources_power[1], nsources)
             scale = np.random.uniform(self.sources_scale[0], self.sources_scale[1], (nsources, 2))
             center = np.random.randint(-self.npixel//2, self.npixel//2, (nsources, 2))
-            sources = [Source(center=c, power=p, scale=s) for c,p,s in zip(center, power, scale)]
+            rot = np.random.uniform(0,360, nsources)
+            component = self.sources_component
+
+            sources = [Source(center=c, power=p, scale=s, rot=r, component=component) for c,p,s,r in zip(center, power, scale, rot)]
         else:
             if not isinstance(sources, list):
                 sources = [sources]
