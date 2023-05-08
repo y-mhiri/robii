@@ -178,6 +178,49 @@ def em_imager_old(vis, uvw, freq, cellsize, niter,
 def student_estep(residual, sigma2, dof):
     return (dof + 1)/(dof + (1/sigma2) * np.linalg.norm(residual.reshape(1,-1), axis=0)**2)
 
+def fftem_imager(vis, gridder, niter, dof, sigmae2, params, mstep_solver, estep=student_estep, init=None):
+    
+        fft2, ifft2 = np.fft.fft2, np.fft.ifft2 # check if fftshift and/or normalization is needed
+        fftshift, ifftshift = np.fft.fftshift, np.fft.ifftshift
+
+        F = lambda x: fftshift(fft2(x, norm='forward'))
+        Fh = lambda x: ifft2(ifftshift(x), norm='forward') 
+
+        grid, degrid = gridder
+
+        if init is None:
+            model_image = Fh(grid(vis))
+        else:
+            model_image = init
+        
+        model_image_k = deepcopy(model_image)
+
+        for it in range(niter):
+                
+            ## Compute residual 
+            residual = vis.reshape(-1) - degrid(F(model_image_k)).reshape(-1)
+            plt.figure()
+            plt.plot(vis.reshape(-1), label='vis')
+            plt.figure()
+            plt.plot(degrid(F(model_image_k)).reshape(-1), label='model vis')
+            plt.show()
+
+            ## Compute expected weights
+            sigma2 = (1/len(vis.reshape(-1))) * np.linalg.norm(residual)**2
+            expected_weights = estep(residual, sigma2, dof)
+
+            
+
+            expected_grid = F(model_image_k) + sigmae2 * grid(np.multiply(expected_weights.reshape(-1), residual.reshape(-1)))
+            plt.imshow(expected_grid.real)
+            plt.colorbar()
+            plt.show()
+            ## M step
+            model_image_k = mstep_solver(expected_grid, (F, Fh), init=model_image_k, **params)
+
+        return model_image_k
+
+
 def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, init=None):
 
     
@@ -269,7 +312,8 @@ def ista(y, ops, niter, threshold, init=None, step_size=None, decay=1, lipshitz=
     for it in range(niter):
         # Perform ISTA update
 
-        r = y.reshape(-1) - forward(x_temp)
+        model = forward(x_temp)
+        r = y.reshape(model.shape) - model
         xk = x_temp + decay*step_size * backward(r)
 
         if lipshitz is not None:
