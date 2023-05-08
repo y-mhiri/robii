@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ducc0.wgridder import ms2dirty, dirty2ms
-from .em_imager import em_imager, ista
+from ..astro.gridder import grid, degrid
+from .em_imager import em_imager, ista, fftem_imager
 from .clean_from_vis import clean_from_vis
 from .unrolled import unrolled_imager
 from ..deep.models import forward_operator
@@ -170,7 +171,7 @@ class Imager():
         #                                  **kwargs)
             # self.image = np.max(0, self.image)
 
-        elif method == 'ista':
+        elif method == 'em-ista':
 
 
             self.image = em_imager(vis=self.vis,
@@ -181,7 +182,7 @@ class Imager():
                                    params=params,
                                    init=init)
             
-        elif method == 'clean':
+        elif method == 'em-clean':
             self.image = em_imager(vis=self.vis,
                                    ops=ops,
                                    niter=niter,
@@ -190,7 +191,32 @@ class Imager():
                                    params=params,
                                    init=init)
 
-    
+        elif method == 'fft-em-ista':
+
+            _grid = lambda x : grid(x, self.uvw, self.freq, npix_x, npix_y, cellsize=cellsize)
+            _degrid = lambda x : degrid(x, self.uvw, self.freq, cellsize=cellsize)
+
+            gridder = (_grid, _degrid)
+
+            try:
+                sigmae2 = params['sigmae2'] 
+                del params['sigmae2']
+            except:
+                raise ValueError('sigmae2 not provided')
+
+            self.image = fftem_imager(vis=self.vis,
+                          gridder=gridder,
+                          sigmae2=sigmae2,
+                          niter=niter,
+                          dof= dof,
+                          mstep_solver=ista,
+                          params=params,
+                          init=init).real
+            
+
+        # elif method == 'clean':
+
+        # elif method == 'ista':
             # self.image = em_imager(vis=self.vis, 
                                         #   freq=self.freq, 
                                         #   uvw=self.uvw, 
