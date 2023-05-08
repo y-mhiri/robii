@@ -20,6 +20,8 @@ setuptools.setup(
                      'matplotlib==3.6.2',
                      'numcodecs==0.11.0',
                      'python-casacore==3.5.1',
+                     'codex-africanus==0.3.4',
+                    #  'nifty-gridder==0.0.1'
                      'omegaconf==2.3.0',
                      'pandas==1.5.3',
                      'reproject==0.10.0',
