@@ -39,8 +39,8 @@ def convolutional_degridding(gridded_vis, kernel):
 
 def grid(vis, uvw, freq, npix_x, npix_y, cellsize=None):
     
-    uvw = np.concatenate((uvw, -uvw), axis=0)
-    vis = np.concatenate((vis, vis.conj()), axis=0)
+    #uvw = np.concatenate((uvw, -uvw), axis=0)
+    #vis = np.concatenate((vis, vis.conj()), axis=0)
     if cellsize is None:
         cellsize = speed_of_light/freq.max()/2/np.abs(uvw).max()
 
