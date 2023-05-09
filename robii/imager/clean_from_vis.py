@@ -8,9 +8,9 @@ def clean_from_vis(vis, ops, psf, params={},  init=None):
     # nvis, nfreq = vis.shape
 
     if init is None:
-        dirty = backward(vis.flatten())/len(vis.flatten())
+        dirty = backward(vis.flatten())#/len(vis.flatten())
     else:
-        dirty = backward(vis.flatten() - forward(init).flatten())/len(vis.flatten())
+        dirty = backward(vis.flatten() - forward(init).flatten()) #/len(vis.flatten())
 
 
     comp, residual = deconvolve_cube(dirty, np_psf=psf, params=params)
