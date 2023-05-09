@@ -29,9 +29,9 @@ class ViSim():
                  sources_params={
                                     'sources_density' : 1,
                                     'sources_power' : [2.5, 3.5],
-                                    'sources_scale' : [5, 20],
+                                    'sources_scale' : [5, 10],
                                     'sources_component' : 'gaussian'},
-                 telescope='vla', 
+                 telescope='meerkat', 
                  synthesis_time = 0,
                  integration_time = 0,
                  dec='zenith',
@@ -42,6 +42,9 @@ class ViSim():
                  add_compound=False, 
                  texture_distributions=None, 
                  dof_ranges=None,
+                 add_lr=False,
+                 ratio_lr=0.1,
+                 p_lr=100,
                  add_rfi=False, 
                  rfi_array=[RFI(1)], 
                  add_calibration_error=False,
@@ -151,6 +154,10 @@ class ViSim():
             self.texture_distributions = [item for key,item in self.distributions.items()
                                            if key in texture_distributions]  
 
+        # Define the low rank noise parameters
+        self.add_lr = add_lr
+        self.ratio_lr = ratio_lr
+        self.p_lr = p_lr
 
         # Define the RFI parameters
         self.add_rfi = add_rfi
@@ -482,7 +489,7 @@ class ViSim():
                 npix_y = npixel,
                 pixsize_x = cellsize,
                 pixsize_y = cellsize,
-                epsilon=1.0e-5)/self.nvis
+                epsilon=1.0e-5)#/self.nvis
     
 
 
@@ -502,7 +509,7 @@ class ViSim():
                     npix_y = npix_y,
                     pixsize_x = cellsize,
                     pixsize_y = cellsize,
-                    epsilon=1.0e-7)/self.nvis
+                    epsilon=1.0e-7)#/self.nvis
         else:
             dirty_image = ms2dirty(
                     uvw = self.uvw,
@@ -512,7 +519,7 @@ class ViSim():
                     npix_y = npix_y,
                     pixsize_x = cellsize,
                     pixsize_y = cellsize,
-                    epsilon=1.0e-7)/self.nvis
+                    epsilon=1.0e-7)#/self.nvis
         
         return dirty_image
 
@@ -671,6 +678,16 @@ class ViSim():
 
                 self.vis[n] += self.noise[n]
 
+            if self.add_lr:
+
+                ncontaminated = int(self.ratio_lr*self.nvis)
+                sigma2_o = 10**(self.p_lr/10)
+                idxs = rng.permutation(np.arange(self.nvis))
+                idxs_contaminated = idxs[:ncontaminated]
+                vis_contaminated = np.zeros_like(self.vis[n])
+                vis_contaminated[idxs_contaminated] = complex_normal(np.zeros(ncontaminated), sigma2_o*np.ones(ncontaminated) , rng=rng)                
+
+                self.vis[n] += vis_contaminated
 
             if self.add_rfi:
                 if verbose:
