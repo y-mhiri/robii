@@ -56,6 +56,7 @@ class Imager():
         print(ms.vis_data.shape)
 
         vis = ms.vis_data
+        vis[ms.flag] = 0
         wgt = ms.weight #[ms.data_desc_id == spw_id]
 
         # extend the weight to the number of channels
@@ -69,6 +70,10 @@ class Imager():
         stokeI_vis = stokeI_vis[ms.data_desc_id == spw_id]
         uvw = ms.uvw[ms.data_desc_id == spw_id]
         freq = ms.chan_freq[spw_id, :]
+
+        # aaply flags to the visibilities
+        print(stokeI_vis.shape)
+        # stokeI_vis[ms.flag[ms.data_desc_id == spw_id]] = 0
 
         return cls(stokeI_vis, freq, uvw, cellsize, npix_x, npix_y)
     
@@ -129,7 +134,7 @@ class Imager():
 
 
         if useducc:
-            adjoint = lambda vis : ms2dirty(  
+            backward = lambda vis : ms2dirty(  
                             uvw = self.uvw,
                             freq = self.freq,
                             ms = vis.reshape(-1,len(self.freq)),
@@ -153,10 +158,10 @@ class Imager():
 
                 H = forward_operator(self.uvw, self.freq, npix_x, cellsize=cellsize)
 
-                adjoint = lambda vis : H.T.conj().dot(vis.flatten()).reshape(int(np.sqrt(H.shape[1])), int(np.sqrt(H.shape[1])))
+                backward = lambda vis : H.T.conj().dot(vis.flatten()).reshape(int(np.sqrt(H.shape[1])), int(np.sqrt(H.shape[1])))
                 forward = lambda x : H.dot(x.flatten()).reshape(-1)
             
-        ops = (forward, adjoint)
+        ops = (forward, backward)
 
 
         if method == 'dirty':
@@ -189,7 +194,8 @@ class Imager():
                                    dof= dof,
                                    mstep_solver=clean_from_vis,
                                    params=params,
-                                   init=init)
+                                   init=init, 
+                                   verbose=True)
 
         elif method == 'fft-em-ista':
 
@@ -198,6 +204,7 @@ class Imager():
 
             gridder = (_grid, _degrid)
 
+            params = params.copy()
             try:
                 sigmae2 = params['sigmae2'] 
                 del params['sigmae2']
@@ -211,7 +218,8 @@ class Imager():
                           dof= dof,
                           mstep_solver=ista,
                           params=params,
-                          init=init).real
+                          init=init,
+                          verbose=False).real
             
 
         # elif method == 'clean':
@@ -237,7 +245,18 @@ class Imager():
     def save_image(self, filename, save_fits=False, overwrite=True):
 
         if save_fits:
-            hdu = fits.PrimaryHDU(self.image)
+
+            hdu = fits.PrimaryHDU(self.image.T[::-1, :])
+
+            hdu.header['NAXIS'] = 2
+            hdu.header['NAXIS1'] = self.npix_x
+            hdu.header['NAXIS2'] = self.npix_y
+
+            # Modify the header keywords to set the coordinates and pixel scale
+            hdu.header['CRVAL1'] = 0
+            hdu.header['CRVAL2'] = 0
+            hdu.header['CDELT1'] = self.cellsize*180 / np.pi
+            hdu.header['CDELT2'] = self.cellsize*180 / np.pi
             if os.path.exists(filename):
                 if overwrite:
                     hdu.writeto(filename, overwrite=True)
