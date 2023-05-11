@@ -609,6 +609,35 @@ class ViSim():
                             )
 
         return vis_rfi, rfi_gains
+    def simulate_low_rank_noise(self, vis, ratio_lr=0.1, p_lr=-10, rng=np.random.default_rng()):
+
+        assert ratio_lr <= 1 and ratio_lr >= 0, "ratio_lr must be between 0 and 1"
+        assert len(vis) == self.nvis, "vis must have the same length as the number of visibilities"
+
+        rank = int(ratio_lr*self.nvis)
+        W = np.random.uniform(0,1,(self.nvis, rank))
+        # keep few non-zero entries
+        W = (W > 0.99).astype(int) * W
+
+        P0 = np.linalg.norm(vis)**2  
+        sigma2_o = 10**(p_lr/10)
+        W = W * np.sqrt(sigma2_o*P0) / np.linalg.norm(W)
+        vis_contaminated =  W @ complex_normal(np.zeros(rank), np.ones(rank), rng=rng).reshape(-1,1)
+
+        # ncontaminated = int(ratio_lr*self.nvis)
+        # idxs = rng.permutation(np.arange(self.nvis))
+        # idxs_contaminated = idxs[0:ncontaminated]
+
+
+        # P0 = np.var(vis[idxs_contaminated])
+        # P0 = np.linalg.norm(vis)**2/self.nvis
+
+        # sigma2_o = 10**(p_lr/10)
+        # p0 = np.abs(vis[idxs_contaminated].flatten())**2
+        # vis_contaminated = np.zeros_like(vis)
+        # vis_contaminated[idxs_contaminated] = complex_normal(np.zeros(ncontaminated), sigma2_o*p0, rng=rng)          
+
+        return vis_contaminated      
 
     def simulate(self, ndata=None, update_sky_images=True, sources=None, verbose=False, rng=np.random.default_rng()):
 
@@ -680,12 +709,7 @@ class ViSim():
 
             if self.add_lr:
 
-                ncontaminated = int(self.ratio_lr*self.nvis)
-                sigma2_o = 10**(self.p_lr/10)
-                idxs = rng.permutation(np.arange(self.nvis))
-                idxs_contaminated = idxs[:ncontaminated]
-                vis_contaminated = np.zeros_like(self.vis[n])
-                vis_contaminated[idxs_contaminated] = complex_normal(np.zeros(ncontaminated), sigma2_o*np.ones(ncontaminated) , rng=rng)                
+                vis_contaminated = self.simulate_low_rank_noise(self.vis[n], self.ratio_lr, self.p_lr, rng=rng)            
 
                 self.vis[n] += vis_contaminated
 
