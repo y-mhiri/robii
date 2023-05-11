@@ -178,7 +178,7 @@ def em_imager_old(vis, uvw, freq, cellsize, niter,
 def student_estep(residual, sigma2, dof):
     return (dof + 1)/(dof + (1/sigma2) * np.linalg.norm(residual.reshape(1,-1), axis=0)**2)
 
-def fftem_imager(vis, gridder, niter, dof, sigmae2, params, mstep_solver, estep=student_estep, init=None):
+def fftem_imager(vis, gridder, niter, dof, sigmae2, params, mstep_solver, estep=student_estep, init=None, verbose=True):
     
         fft2, ifft2 = np.fft.fft2, np.fft.ifft2 # check if fftshift and/or normalization is needed
         fftshift, ifftshift = np.fft.fftshift, np.fft.ifftshift
@@ -196,32 +196,38 @@ def fftem_imager(vis, gridder, niter, dof, sigmae2, params, mstep_solver, estep=
         model_image_k = deepcopy(model_image)
 
         for it in range(niter):
-                
+            
+            if verbose:
+                print('Iteration: ', it)
+
             ## Compute residual 
             residual = vis.reshape(-1) - degrid(F(model_image_k)).reshape(-1)
-            plt.figure()
-            plt.plot(vis.reshape(-1), label='vis')
-            plt.figure()
-            plt.plot(degrid(F(model_image_k)).reshape(-1), label='model vis')
-            plt.show()
+            # plt.figure()
+            # plt.plot(vis.reshape(-1), label='vis')
+            # plt.figure()
+            # plt.plot(degrid(F(model_image_k)).reshape(-1), label='model vis')
+            # plt.show()
 
             ## Compute expected weights
             sigma2 = (1/len(vis.reshape(-1))) * np.linalg.norm(residual)**2
             expected_weights = estep(residual, sigma2, dof)
 
-            
-
+            if verbose:
+                print('Computing expected grid...')
             expected_grid = F(model_image_k) + sigmae2 * grid(np.multiply(expected_weights.reshape(-1), residual.reshape(-1)))
-            plt.imshow(expected_grid.real)
-            plt.colorbar()
-            plt.show()
+            # plt.imshow(expected_grid.real)
+            # plt.colorbar()
+            # plt.show()
             ## M step
+            if verbose:
+                print('Mstep starting...')
+
             model_image_k = mstep_solver(expected_grid, (F, Fh), init=model_image_k, **params)
 
         return model_image_k
 
 
-def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, init=None):
+def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, init=None, verbose=False):
 
     
     forward, backward  = ops
@@ -234,24 +240,29 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
     model_image_k = deepcopy(model_image)
 
     for it in range(niter):
-
+        if verbose:
+            print(f'Iteration {it}')
         ## Compute residual 
         residual = vis.reshape(-1) - forward(model_image_k).reshape(-1)
 
         ## Compute expected weights
         sigma2 = (1/len(vis.reshape(-1))) * np.linalg.norm(residual)**2
         expected_weights = estep(residual, sigma2, dof)
-
+        if verbose:
+            print('Estep done...')
         ## M step
-        # print(expected_weights)
-        model_vis = np.multiply(expected_weights.reshape(-1), vis.reshape(-1))
-        model_image_k = mstep_solver(model_vis, ops, init=model_image_k, **params)
+        model_vis = np.multiply(np.sqrt(expected_weights).reshape(-1), vis.reshape(-1))
+
+        if verbose:
+            print("MStep starting...")
+        model_image_k = mstep_solver(model_vis, ops, weights=np.sqrt(expected_weights), init=model_image_k, **params)
+        
 
     return model_image_k
 
 
 
-def ista(y, ops, niter, threshold, init=None, step_size=None, decay=1, lipshitz=None, fista=False):
+def ista(y, ops, niter, threshold, weights=None, init=None, step_size=None, decay=1, lipshitz=None, fista=False):
     """
         Solves the LASSO regression problem,
         $$
@@ -282,8 +293,15 @@ def ista(y, ops, niter, threshold, init=None, step_size=None, decay=1, lipshitz=
             The solution to the LASSO regression problem.
     
     """
-
+    if weights is None:
+        weights = np.ones(y.shape)
+    else:
+        assert weights.shape == y.shape, 'Weights must have the same shape as the data vector.'
+    
     forward, backward  = ops
+
+    weighted_forward = lambda x: np.multiply(weights.flatten(), forward(x).flatten()).reshape(y.shape)
+    weighted_backward = lambda y: backward(np.multiply(weights.reshape(y.shape), y))
 
     # def Q(L, xk, xkm1):
     #     return np.linalg.norm(y - forward(xkm1))**2 + L/2 * np.linalg.norm(xk - xkm1)**2 + threshold * np.linalg.norm(xk, ord=1) + ((xk - xkm1).reshape(1,-1) @ backward(y - forward(xkm1)).reshape(-1,1))[0]
@@ -300,7 +318,7 @@ def ista(y, ops, niter, threshold, init=None, step_size=None, decay=1, lipshitz=
 
     # x = np.zeros(y.shape)
     if init is None:
-        x = backward(y)
+        x = weighted_backward(y)
     else:
         x = init
 
@@ -312,9 +330,9 @@ def ista(y, ops, niter, threshold, init=None, step_size=None, decay=1, lipshitz=
     for it in range(niter):
         # Perform ISTA update
 
-        model = forward(x_temp)
+        model = weighted_forward(x_temp)
         r = y.reshape(model.shape) - model
-        xk = x_temp + decay*step_size * backward(r)
+        xk = x_temp + decay*step_size * weighted_backward(r)
 
         if lipshitz is not None:
             xk = np.sign(xk) * np.max([np.abs(xk) - (threshold/lipshitz), np.zeros(xk.shape)], axis=0)
