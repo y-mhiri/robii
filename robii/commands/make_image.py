@@ -41,8 +41,8 @@ def robii():
 @click.option('--robust/--gaussian', default=True)
 @click.option('--dirty/--no_dirty', default=False, help='compute dirty image only')
 @click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
-@click.option('--plot/--no-plot', '-p', default=False, help='plot')
-def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, threshold, dof, robust, dirty, fits, plot):
+@click.option('--verbose/--no-verbose', '-p', default=False, help='verbosity')
+def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, threshold, dof, robust, dirty, fits, verbose):
     """
     Make an image from a measurement set
     """
@@ -59,20 +59,28 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
 
         return True
 
-    kwargs = {
-        'niter': niter,
-        'miter': miter,
-        'mstep_size': mstep_size,
-        'threshold': threshold,
-        'dof': dof,
-        'gaussian': robust,
-        'verbose': True,
-        'plot': plot,
-        'save_fits': fits,
-        'out': out
-    }
+    # kwargs = {
+    #     'niter': niter,
+    #     'miter': miter,
+    #     'mstep_size': mstep_size,
+    #     'threshold': threshold,
+    #     'dof': dof,
+    #     'gaussian': robust,
+    #     'verbose': True,
+    #     'plot': plot,
+    #     'save_fits': fits,
+    #     'out': out
+    # }
 
-    imager.make_image(method='robii', **kwargs)
+    params = {'niter': 100,
+                'sigmae2' : 1e-13,
+                'threshold': threshold,
+                'step_size': mstep_size}
+    
+
+    imager.make_image(method='fft-em-ista', niter=niter, dof=dof,
+                      init=np.zeros((npix_x, npix_y)), params=params)
+
         
 
     ext = 'fits' if fits else 'png'
