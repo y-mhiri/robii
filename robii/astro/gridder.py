@@ -68,7 +68,7 @@ def degrid(gridded_visibilities, uvw, freq, cellsize=None):
 
     ifft2, ifftshift = np.fft.ifft2, np.fft.ifftshift
 
-    dirty = ifft2(ifftshift(gridded_visibilities), norm='backward')
+    dirty = ifft2(ifftshift(gridded_visibilities), norm='forward')
 
     degridded_visibilities = dirty2ms(
         uvw = uvw,
