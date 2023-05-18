@@ -73,7 +73,7 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
     # }
 
     params = {'niter': 100,
-                'sigmae2' : 1e-13,
+                'sigmae2' : 1e-8,
                 'threshold': threshold,
                 'step_size': mstep_size}
     
