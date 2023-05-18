@@ -23,7 +23,7 @@ def forward_operator(uvw, freq, npixel, cellsize=None):
     """
     wl = speed_of_light / freq
     if cellsize is None:
-        cellsize = np.min(wl)/(2*np.max(uvw))
+        cellsize = np.min(wl)/(2*np.max(np.abs(uvw)))
 
     # cellsize = np.rad2deg(cellsize)
     # fov = cellsize*npixel
@@ -181,6 +181,81 @@ class RobiiNet(nn.Module):
 
         return torch.abs(xk).real
 
+class RobustLayer(nn.Module):
+
+    def __init__(self, n):
+        """
+            n is the number of hidden layer
+        """
+        super(RobustLayer, self).__init__()
+
+        self.W0 = nn.Parameter(torch.randn(1, n))
+        self.W1 = nn.Parameter(torch.randn(1, n))
+
+        self.W2 = nn.Parameter(torch.randn(1, n))
+
+
+
+    def forward(self, x, weights):
+        h = nn.Sigmoid()(x**2 @ self.W0)
+        new_weights = nn.ReLU()(h @ self.W1.T + weights @ self.W2)
+        return new_weights
+    
+    
+
+class UnrolledEM(nn.Module):
+
+    def __init__(self, m, robust_layer=None):
+        """
+        m: width of the robust layer
+        H: Forward operator tensor of shape (n x k)
+        theshold: regularization parameter
+
+        
+        Solve the following regularized maximum likelihood problem:
+        argmin_{x} l(y, Hx) + lmbda ||x||_1
+
+        where l(y,Hx) is the log likelihood of the data y given the model Hx
+        and ||x||_1 is the L1 norm of x as a regularization term.
+
+        """
+
+        super(UnrolledEM, self).__init__()
+        self.m = m
+        self.robust_layer = RobustLayer(m)
+        if robust_layer is not None:
+            self.robust_layer.load_state_dict(torch.load(robust_layer))
+
+
+    def forward(self, y, H, threshold=1e-3, x0=None, niter=10, miter=1):
+        
+        nvis = H.shape[0]
+
+        lip = torch.norm(H)**2
+        step = 1/lip
+        if x0 is None:
+            # initialize x0 to the solution of the least squares problem
+            # x0 = torch.pinverse(self.H) @ y
+            x0 = H.T.conj() @ y /lip
+
+        x = x0
+        w = torch.ones_like(y, dtype=torch.float32)
+        for i in range(niter):
+            # compute the residual             
+            r = y - H @ x
+            sigma2 = torch.norm(r.reshape(-1, nvis), dim=0, keepdim=True)**2 / nvis
+
+            normalized_r = r / sigma2.reshape(r.shape)
+            normalized_r = torch.unsqueeze(normalized_r, -1)
+            w = self.robust_layer((torch.abs(normalized_r)**2).to(torch.float32), w)
+            w = w.reshape(r.shape)
+
+            for mit in range(miter):
+
+                x = x + step * H.T.conj() @ torch.mul(w , r)
+                x = nn.ReLU()(x - threshold) # Soft threshold + projection on R+
+
+        return x.real.to(torch.float32), w
 
 
 class RobiiNetV2(nn.Module):
