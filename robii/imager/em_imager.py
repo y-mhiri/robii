@@ -257,7 +257,6 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
             print("MStep starting...")
         model_image_k = mstep_solver(model_vis, ops, weights=np.sqrt(expected_weights), init=model_image_k, **params)
         
-
     return model_image_k
 
 
@@ -333,11 +332,11 @@ def ista(y, ops, niter, threshold, weights=None, init=None, step_size=None, deca
         model = weighted_forward(x_temp)
         r = y.reshape(model.shape) - model
         xk = x_temp + decay*step_size * weighted_backward(r)
+ 
+        xk = np.sign(xk) * np.max([np.abs(xk) - threshold, np.zeros(xk.shape)], axis=0)
 
-        if lipshitz is not None:
-            xk = np.sign(xk) * np.max([np.abs(xk) - (threshold/lipshitz), np.zeros(xk.shape)], axis=0)
-        else:
-            xk = np.sign(xk) * np.max([np.abs(xk) - threshold, np.zeros(xk.shape)], axis=0)
+        xk = np.max([np.zeros_like(xk), xk], axis=0)
+        
 
         # count = 0
         # while F(xk) > Q(step_size, xk, x_temp):
