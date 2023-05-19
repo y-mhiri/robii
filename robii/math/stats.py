@@ -29,7 +29,7 @@ def complex_normal(mean, Cov, diag=True, rng=np.random.RandomState(0)):
         if diag:
             
             _y_real = rng.normal(size=n_samples) * np.sqrt(np.real(Cov/2)) + np.real(mean)
-            _y_imag = rng.normal(size=n_samples) * np.sqrt(np.imag(Cov/2)) + np.imag(mean)
+            _y_imag = rng.normal(size=n_samples) * np.sqrt(np.real(Cov/2)) + np.imag(mean)
             _y = _y_real + 1j*_y_imag
             _y = _y.reshape((-1,1))
 
