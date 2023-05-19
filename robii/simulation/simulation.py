@@ -615,13 +615,17 @@ class ViSim():
         assert len(vis) == self.nvis, "vis must have the same length as the number of visibilities"
 
         rank = int(ratio_lr*self.nvis)
-        W = np.random.uniform(0,1,(self.nvis, rank))
-        # keep few non-zero entries
-        W = (W > 0.99).astype(int) * W
+        # create a sparse matrix with 10% of random coefficients of size nvis x rank
+        W = np.zeros((self.nvis, rank), dtype=complex)
+        idxs = rng.permutation(np.arange(self.nvis))
+        idxs_lr = idxs[0:rank]
+        W[idxs_lr, np.arange(rank)] = np.random.uniform(0,1,rank) + 1j*np.random.uniform(0,1,rank)   
 
-        P0 = np.linalg.norm(vis)**2  
-        sigma2_o = 10**(p_lr/10)
-        W = W * np.sqrt(sigma2_o*P0) / np.linalg.norm(W)
+
+
+        P0 = np.linalg.norm(vis)**2  / self.nvis
+        sigma2_o = 10**(p_lr/10)*P0
+        W = W * np.sqrt(sigma2_o) / np.linalg.norm(W)
         vis_contaminated =  W @ complex_normal(np.zeros(rank), np.ones(rank), rng=rng).reshape(-1,1)
 
         # ncontaminated = int(ratio_lr*self.nvis)
