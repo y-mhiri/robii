@@ -247,7 +247,6 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
 
         ## Compute expected weights
         expected_weights = estep(residual, sigma2, dof)
-        sigma2 = np.linalg.norm(np.multiply(residual, expected_weights))**2/nvis
         if verbose:
             print('Estep done...')
         ## M step
@@ -256,6 +255,9 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
         if verbose:
             print("MStep starting...")
         model_image_k_temp = mstep_solver(model_vis, ops, weights=np.sqrt(expected_weights), init=model_image_k, **params)
+        
+        sigma2 = np.linalg.norm(np.multiply(residual, expected_weights))**2/nvis
+        
         delta = np.linalg.norm(model_image_k - model_image_k_temp)**2 #/ len(model_image.flatten())
         if delta < 1e-6:
             print(f'Converged at iteration {it}')
