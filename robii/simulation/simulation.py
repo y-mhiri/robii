@@ -78,8 +78,9 @@ class ViSim():
         else:
             snapshot = False
         
-        self.synthesis_time = synthesis_time
-        self.integration_time = integration_time
+
+        self.nscans = int(synthesis_time*3600 / integration_time)
+
         if dec == 'zenith':
             self.dec = self.telescope_location_lon_lat[1] * 180 / np.pi
         else:
@@ -569,7 +570,7 @@ class ViSim():
 
     def simulate_speckle_noise(self, vis, snr, rng=np.random.default_rng()):
 
-        P0 = np.linalg.norm(vis - np.mean(vis))**2 / self.nvis
+        P0 = np.linalg.norm(vis)**2 / self.nvis
         sigma2 = 10**(-snr/10)*P0
 
         speckle = complex_normal(np.zeros(self.nvis), sigma2*np.ones(self.nvis), rng=rng)
@@ -595,20 +596,35 @@ class ViSim():
     def simulate_rfi_visibilities(self, rfi_array, rng=np.random.default_rng()):
 
         vis_rfi = np.zeros((self.nvis, self.nfreq), dtype=complex)
+
+        
+    
+        n_affected_scans = int(0.25*self.nscans)
+        selected_scans = rng.choice(np.arange(self.nscans), replace=False, size=n_affected_scans)
         for _, rfi in enumerate(rfi_array):
 
-            rfi_gains = rfi.compute_gains(self.uvw_index, self.antenna_positions)
+            # rfi_gains = rfi.compute_gains(self.uvw_index, self.antenna_positions)
+
+     
+
+            nvis_per_scan = self.nvis//self.nscans
+            rfi_idx = np.array([scan * nvis_per_scan + np.arange(nvis_per_scan) for scan in selected_scans])
+            rfi_idx = np.hstack(rfi_idx)
+
+            weights = np.zeros_like(vis_rfi, dtype=float)
+            weights[rfi_idx] = 1
+            
             vis_rfi += dirty2ms(
                         uvw = self.uvw,
                         freq = self.freq,
-                        wgt = rfi_gains.reshape(-1,1),
+                        wgt = weights,
                         dirty = rfi.sky_model(self.cellsize, self.npixel),
                         pixsize_x = self.cellsize,
                         pixsize_y = self.cellsize,
                         epsilon=1.0e-7
                             )
 
-        return vis_rfi, rfi_gains
+        return vis_rfi, selected_scans
     def simulate_low_rank_noise(self, vis, ratio_lr=0.1, p_lr=-10, rng=np.random.default_rng()):
 
         assert ratio_lr <= 1 and ratio_lr >= 0, "ratio_lr must be between 0 and 1"
