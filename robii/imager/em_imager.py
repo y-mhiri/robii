@@ -229,16 +229,16 @@ def fftem_imager(vis, gridder, niter, dof, sigmae2, params, mstep_solver, estep=
 
 def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, init=None, verbose=False):
 
-    
+    nvis = len(vis.flatten())
     forward, backward  = ops
 
     if init is None:
-        model_image = backward(vis)/len(vis.reshape(-1))
+        model_image = backward(vis)/nvis
     else:
         model_image = init
 
     model_image_k = deepcopy(model_image)
-
+    sigma2 = np.linalg.norm(vis.flatten() - forward(model_image_k).flatten())**2/nvis
     for it in range(niter):
         if verbose:
             print(f'Iteration {it}')
@@ -246,8 +246,8 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
         residual = vis.reshape(-1) - forward(model_image_k).reshape(-1)
 
         ## Compute expected weights
-        sigma2 = (1/len(vis.reshape(-1))) * np.linalg.norm(residual)**2
         expected_weights = estep(residual, sigma2, dof)
+        sigma2 = np.linalg.norm(np.multiply(residual, expected_weights))**2/nvis
         if verbose:
             print('Estep done...')
         ## M step
@@ -255,13 +255,18 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
 
         if verbose:
             print("MStep starting...")
-        model_image_k = mstep_solver(model_vis, ops, weights=np.sqrt(expected_weights), init=model_image_k, **params)
-        
+        model_image_k_temp = mstep_solver(model_vis, ops, weights=np.sqrt(expected_weights), init=model_image_k, **params)
+        delta = np.linalg.norm(model_image_k - model_image_k_temp)**2 #/ len(model_image.flatten())
+        if delta < 1e-6:
+            print(f'Converged at iteration {it}')
+            break
+        model_image_k = model_image_k_temp
+
     return model_image_k
 
 
 
-def ista(y, ops, niter, threshold, weights=None, init=None, step_size=None, decay=1, lipshitz=None, fista=False):
+def ista(y, ops, niter, threshold, weights=None, init=None, step_size=None, decay=1, lipshitz=None, fista=False, eps=1e-6):
     """
         Solves the LASSO regression problem,
         $$
@@ -357,7 +362,14 @@ def ista(y, ops, niter, threshold, weights=None, init=None, step_size=None, deca
             xkm1 = xk
             tk = tkp1
         else:
+            xkm1 = x_temp
             x_temp = xk
+
+            if np.linalg.norm(xk - xkm1)**2 < eps:
+                print(f'Converged at iteration {it}')
+                break
+
+
 
     return xk
 
