@@ -238,31 +238,45 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
         model_image = init
 
     model_image_k = deepcopy(model_image)
-    sigma2 = np.linalg.norm(vis.flatten() - forward(model_image_k).flatten())**2/nvis
+    # sigma2 = np.linalg.norm(vis.flatten() - forward(model_image_k).flatten())**2/nvis
+    # sigma2 = ((dof -2)/dof) * sigma2
+
     for it in range(niter):
         if verbose:
             print(f'Iteration {it}')
         ## Compute residual 
-        residual = vis.reshape(-1) - forward(model_image_k).reshape(-1)
+        residual = vis.flatten() - forward(model_image_k).flatten()
 
         ## Compute expected weights
+        sigma2 = (1/nvis) * np.linalg.norm(residual)**2
+        # sigma2 = ((dof -2)/dof) * sigma2
+
         expected_weights = estep(residual, sigma2, dof)
+
         if verbose:
             print('Estep done...')
         ## M step
-        model_vis = np.multiply(np.sqrt(expected_weights).reshape(-1), vis.reshape(-1))
+
+        ## Update model image
+        model_vis = np.multiply(np.sqrt(expected_weights).flatten(), vis.flatten())
 
         if verbose:
             print("MStep starting...")
         model_image_k_temp = mstep_solver(model_vis, ops, weights=np.sqrt(expected_weights), init=model_image_k, **params)
         
-        sigma2 = np.linalg.norm(np.multiply(residual, expected_weights))**2/nvis
         
         delta = np.linalg.norm(model_image_k - model_image_k_temp)**2 #/ len(model_image.flatten())
         if delta < 1e-6:
             print(f'Converged at iteration {it}')
             break
         model_image_k = model_image_k_temp
+
+
+
+        # ## Update sigma2
+        # residual = vis.flatten() - forward(model_image_k).flatten()
+        # expected_weights = estep(residual, sigma2, dof)
+        # sigma2 = np.linalg.norm(np.multiply(residual.flatten(), np.sqrt(expected_weights.flatten())))**2/nvis
 
     return model_image_k
 
