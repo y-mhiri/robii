@@ -193,8 +193,9 @@ def fftem_imager(vis, gridder, niter, dof, sigmae2, params, mstep_solver, estep=
         else:
             model_image = init
         
+        nvis = len(vis.flatten())
         model_image_k = deepcopy(model_image)
-
+        sigma2 = (1/nvis) * np.linalg.norm(vis.reshape(-1) - degrid(F(model_image_k)).reshape(-1))**2
         for it in range(niter):
             
             if verbose:
@@ -209,9 +210,10 @@ def fftem_imager(vis, gridder, niter, dof, sigmae2, params, mstep_solver, estep=
             # plt.show()
 
             ## Compute expected weights
-            sigma2 = (1/len(vis.reshape(-1))) * np.linalg.norm(residual)**2
+            # sigma2 = (1/nvis) * np.linalg.norm(residual)**2
             expected_weights = estep(residual, sigma2, dof)
-
+            sigma2 = (1/nvis) * np.linalg.norm(np.multiply(expected_weights.flatten(), residual.flatten()))**2
+            
             if verbose:
                 print('Computing expected grid...')
             expected_grid = F(model_image_k) + sigmae2 * grid(np.multiply(expected_weights.reshape(-1), residual.reshape(-1)))
@@ -238,8 +240,8 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
         model_image = init
 
     model_image_k = deepcopy(model_image)
-    # sigma2 = np.linalg.norm(vis.flatten() - forward(model_image_k).flatten())**2/nvis
-    # sigma2 = ((dof -2)/dof) * sigma2
+    sigma2 = np.linalg.norm(vis.flatten() - forward(model_image_k).flatten())**2/nvis
+
 
     for it in range(niter):
         if verbose:
@@ -248,10 +250,9 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
         residual = vis.flatten() - forward(model_image_k).flatten()
 
         ## Compute expected weights
-        sigma2 = (1/nvis) * np.linalg.norm(residual)**2
-        # sigma2 = ((dof -2)/dof) * sigma2
-
         expected_weights = estep(residual, sigma2, dof)
+        # sigma2 = (1/nvis) * np.linalg.norm(residual)**2
+        sigma2 = np.linalg.norm(np.multiply(residual.flatten(), np.sqrt(expected_weights.flatten())))**2/nvis
 
         if verbose:
             print('Estep done...')
@@ -265,10 +266,10 @@ def em_imager(vis, ops, niter, dof, params, mstep_solver, estep=student_estep, i
         model_image_k_temp = mstep_solver(model_vis, ops, weights=np.sqrt(expected_weights), init=model_image_k, **params)
         
         
-        delta = np.linalg.norm(model_image_k - model_image_k_temp)**2 #/ len(model_image.flatten())
-        if delta < 1e-6:
-            print(f'Converged at iteration {it}')
-            break
+        # delta = np.linalg.norm(model_image_k - model_image_k_temp)**2 #/ len(model_image.flatten())
+        # if delta < 1e-6:
+        #     print(f'Converged at iteration {it}')
+        #     break
         model_image_k = model_image_k_temp
 
 
@@ -355,6 +356,7 @@ def ista(y, ops, niter, threshold, weights=None, init=None, step_size=None, deca
         xk = x_temp + decay*step_size * weighted_backward(r)
  
         xk = np.sign(xk) * np.max([np.abs(xk) - threshold, np.zeros(xk.shape)], axis=0)
+        # xk = np.sign(xk) * np.max([np.abs(xk) - threshold*step_size, np.zeros(xk.shape)], axis=0)
 
         xk = np.max([np.zeros_like(xk), xk], axis=0)
         
@@ -381,9 +383,9 @@ def ista(y, ops, niter, threshold, weights=None, init=None, step_size=None, deca
             xkm1 = x_temp
             x_temp = xk
 
-            if np.linalg.norm(xk - xkm1)**2 < eps:
-                print(f'Converged at iteration {it}')
-                break
+            # if np.linalg.norm(xk - xkm1)**2 / np.linalg.norm(xkm1)**2 < eps:
+            #     print(f'Converged at iteration {it}')
+            #     break
 
 
 
