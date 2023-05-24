@@ -40,11 +40,12 @@ def robii():
 @click.option('--mstep_size', '-m', default=.0001, help='step size for m step')
 @click.option('--threshold', '-t', default=.0001, help='threshold')
 @click.option('--dof', '-d', default=10.0, help='degrees of freedom')
+@click.option('--sigmae2', default=1e-5, help='sigmae2')
 @click.option('--robust/--gaussian', default=True)
 @click.option('--dirty/--no_dirty', default=False, help='compute dirty image only')
 @click.option('--fits/--no_fits', '-f', default=False, help='save as fits')
 @click.option('--verbose/--no-verbose', '-p', default=False, help='verbosity')
-def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, threshold, dof, robust, dirty, fits, verbose):
+def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, threshold, dof, sigmae2, robust, dirty, fits, verbose):
     """
     Make an image from a measurement set
     """
@@ -57,7 +58,7 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
     if dirty:
         imager.make_image(method='dirty')
         ext = 'fits' if fits else 'png'
-        imager.save_image(f'{out}.{ext}', save_fits=fits)
+        imager.save_image(f'{out}_dirty.{ext}', save_fits=fits)
 
         return True
 
@@ -75,13 +76,16 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
     # }
 
     params = {'niter': miter,
-                'sigmae2' : 1e-8,
+                'sigmae2' : sigmae2,
                 'threshold': threshold,
                 'step_size': mstep_size}
     
 
     model_image = imager.make_image(method='fft-em-ista', niter=niter, dof=dof,
                       init=np.zeros((npix_x, npix_y)), params=params)
+    
+    image_Jybeam = model_image/len(imager.vis.flatten())
+
 
     residual_image = imager.compute_residual(model_image)
 
@@ -90,7 +94,7 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
 
 
     ext = 'fits' if fits else 'png'
-    imager.save_image(f'{out}.{ext}', save_fits=fits)
+    imager.save_image(f'{out}.{ext}', save_fits=fits, image=image_Jybeam)
     imager.save_image(f'{out}_residual.{ext}', save_fits=fits, image=residual_image)
 
     return True
