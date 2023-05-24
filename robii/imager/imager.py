@@ -122,6 +122,42 @@ class Imager():
 
         return self.dirty
     
+    def compute_residual(self, model_image, cellsize=None, npix_x=None, npix_y=None):
+
+        if cellsize is None:
+            cellsize = self.cellsize
+        if npix_x is None:
+            npix_x = self.npix_x
+        if npix_y is None:
+            npix_y = self.npix_y
+
+
+        backward = lambda vis : ms2dirty(  
+                            uvw = self.uvw,
+                            freq = self.freq,
+                            ms = vis.reshape(-1,len(self.freq)),
+                            npix_x = npix_x,
+                            npix_y = npix_y,
+                            pixsize_x = cellsize,
+                            pixsize_y = cellsize,
+                            epsilon=1.0e-5 
+                    )
+            
+        forward = lambda x : dirty2ms(  
+                    uvw = self.uvw,
+                    freq = self.freq,
+                    dirty = x,
+                    pixsize_x = cellsize,
+                    pixsize_y = cellsize,
+                    epsilon=1.0e-5 
+                    ).reshape(-1)
+        
+
+        self.residual = self.vis - forward(model_image)
+        self.residual_image = backward(self.residual)
+        
+        return self.residual_image
+
 
     def make_image(self, init=None, niter=10, dof=10, cellsize=None, npix_x=None, npix_y=None, method='dirty', useducc=True, params=None):
 
@@ -242,11 +278,16 @@ class Imager():
 
         return self.image
     
-    def save_image(self, filename, save_fits=False, overwrite=True):
+    def save_image(self, filename, save_fits=False, image=None, overwrite=True):
+
+
+        if image is None:
+            image = self.image
+        
 
         if save_fits:
 
-            hdu = fits.PrimaryHDU(self.image.T[::-1, :])
+            hdu = fits.PrimaryHDU(image.T[::-1, :])
 
             hdu.header['NAXIS'] = 2
             hdu.header['NAXIS1'] = self.npix_x
@@ -266,7 +307,7 @@ class Imager():
                 hdu.writeto(filename, overwrite=False)
 
         else:
-            plt.imsave(filename, self.image, origin='lower', cmap='Spectral_r')
+            plt.imsave(filename, image, origin='lower', cmap='Spectral_r')
 
     def plot_uv(self, ax=None, **kwargs):
 
