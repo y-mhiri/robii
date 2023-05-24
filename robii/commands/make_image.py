@@ -17,6 +17,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+from ducc0.wgridder import dirty2ms, ms2dirty
+
 # group of commands to make images
 @click.group()
 def robii():
@@ -72,19 +74,24 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
     #     'out': out
     # }
 
-    params = {'niter': 100,
+    params = {'niter': miter,
                 'sigmae2' : 1e-8,
                 'threshold': threshold,
                 'step_size': mstep_size}
     
 
-    imager.make_image(method='fft-em-ista', niter=niter, dof=dof,
+    model_image = imager.make_image(method='fft-em-ista', niter=niter, dof=dof,
                       init=np.zeros((npix_x, npix_y)), params=params)
 
-        
+    residual_image = imager.compute_residual(model_image)
+
+
+
+
 
     ext = 'fits' if fits else 'png'
     imager.save_image(f'{out}.{ext}', save_fits=fits)
+    imager.save_image(f'{out}_residual.{ext}', save_fits=fits, image=residual_image)
 
     return True
 
