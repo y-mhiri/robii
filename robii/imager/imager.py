@@ -58,13 +58,13 @@ class Imager():
         vis = ms.vis_data
         vis[ms.flag] = 0
         wgt = ms.weight #[ms.data_desc_id == spw_id]
-
+   
         # extend the weight to the number of channels
         wgt = np.repeat(wgt.reshape(-1,2, 1), ms.nb_chan, axis=-1)
 
         if corr_type == 'RR-LL':
-            stokeI_vis = (vis[:, :, 0]*wgt[:,0] + vis[:, :, 1]*wgt[:,1])/2
-            # stokeI_vis = (vis[:, :, 0] + vis[:, :, 1])/2
+            # stokeI_vis = (vis[:, :, 0]*wgt[:,0] + vis[:, :, 1]*wgt[:,1])/2
+            stokeI_vis  = (vis[:, :, 0] + vis[:, :, 1])/2
 
 
         stokeI_vis = stokeI_vis[ms.data_desc_id == spw_id]
@@ -104,14 +104,13 @@ class Imager():
                             uvw = self.uvw,
                             freq = self.freq,
                             ms = self.vis.astype(np.complex64),
-                            # do_wstacking = True,
                             npix_x = npix_x,
                             npix_y = npix_y,
                             pixsize_x = cellsize,
                             pixsize_y = cellsize,
                             epsilon=1.0e-5 
-        )
-        
+        )/len(self.vis.flatten())
+        # print(len(self.uvw))
         if plot:
             plt.figure(figsize=(8,8))
             plt.imshow(self.dirty, origin='lower', cmap='Spectral_r')
@@ -153,7 +152,7 @@ class Imager():
                     ).reshape(-1)
         
 
-        self.residual = self.vis - forward(model_image)
+        self.residual = self.vis - forward(model_image).reshape(-1, len(self.freq))
         self.residual_image = backward(self.residual)
         
         return self.residual_image
