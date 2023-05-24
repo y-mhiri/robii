@@ -599,7 +599,7 @@ class ViSim():
 
         
     
-        n_affected_scans = int(0.25*self.nscans)
+        n_affected_scans = int(0.2*self.nscans)
         selected_scans = rng.choice(np.arange(self.nscans), replace=False, size=n_affected_scans)
         for _, rfi in enumerate(rfi_array):
 
