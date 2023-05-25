@@ -94,7 +94,7 @@ def fromms(mspath, out, image_size, cellsize, nchan, niter, miter, mstep_size, t
 
 
     ext = 'fits' if fits else 'png'
-    imager.save_image(f'{out}.{ext}', save_fits=fits, image=image_Jybeam)
+    imager.save_image(f'{out}.{ext}', save_fits=fits, image=model_image)
     imager.save_image(f'{out}_residual.{ext}', save_fits=fits, image=residual_image)
 
     return True
