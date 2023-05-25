@@ -212,11 +212,13 @@ def fftem_imager(vis, gridder, niter, dof, sigmae2, params, mstep_solver, estep=
             ## Compute expected weights
             # sigma2 = (1/nvis) * np.linalg.norm(residual)**2
             expected_weights = estep(residual, sigma2, dof)
-            sigma2 = (1/nvis) * np.linalg.norm(np.multiply(expected_weights.flatten(), residual.flatten()))**2
-            
+
             if verbose:
                 print('Computing expected grid...')
             expected_grid = F(model_image_k) + sigmae2 * grid(np.multiply(expected_weights.reshape(-1), residual.reshape(-1)))
+            # expected_grid = F(model_image_k) + (sigmae2/sigma2) * grid(np.multiply(expected_weights.reshape(-1), residual.reshape(-1)))
+            sigma2 = (1/nvis) * np.linalg.norm(np.multiply(np.sqrt(expected_weights).flatten(), residual.flatten()))**2
+            
             # plt.imshow(expected_grid.real)
             # plt.colorbar()
             # plt.show()
