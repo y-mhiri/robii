@@ -599,30 +599,37 @@ class ViSim():
 
         
     
-        n_affected_scans = int(0.2*self.nscans)
+        nvis_per_scan = self.nvis//self.nscans
+        n_affected_scans = int(1*self.nscans)
         selected_scans = rng.choice(np.arange(self.nscans), replace=False, size=n_affected_scans)
-        for _, rfi in enumerate(rfi_array):
 
-            # rfi_gains = rfi.compute_gains(self.uvw_index, self.antenna_positions)
+        for scan in selected_scans:
 
-     
-
-            nvis_per_scan = self.nvis//self.nscans
-            rfi_idx = np.array([scan * nvis_per_scan + np.arange(nvis_per_scan) for scan in selected_scans])
+            rfi_idx = np.array([scan * nvis_per_scan + np.arange(nvis_per_scan)])
             rfi_idx = np.hstack(rfi_idx)
+            nrfi = rng.poisson(len(rfi_array))
+            for n in range(nrfi):
 
-            weights = np.zeros_like(vis_rfi, dtype=float)
-            weights[rfi_idx] = 1
-            
-            vis_rfi += dirty2ms(
-                        uvw = self.uvw,
-                        freq = self.freq,
-                        wgt = weights,
-                        dirty = rfi.sky_model(self.cellsize, self.npixel),
-                        pixsize_x = self.cellsize,
-                        pixsize_y = self.cellsize,
-                        epsilon=1.0e-7
-                            )
+                # rfi_gains = rfi.compute_gains(self.uvw_index, self.antenna_positions)
+                p0 = rfi_array[0].power
+                prfi = 0
+                while prfi <= 0:
+                    prfi = rng.normal(p0, p0*0.1)
+
+                rfi = RFI(prfi)
+        
+                weights = np.zeros_like(vis_rfi, dtype=float)
+                weights[rfi_idx] = 1
+                
+                vis_rfi += dirty2ms(
+                            uvw = self.uvw,
+                            freq = self.freq,
+                            wgt = weights,
+                            dirty = rfi.sky_model(self.cellsize, self.npixel),
+                            pixsize_x = self.cellsize,
+                            pixsize_y = self.cellsize,
+                            epsilon=1.0e-7
+                                )
 
         return vis_rfi, selected_scans
     def simulate_low_rank_noise(self, vis, ratio_lr=0.1, p_lr=-10, rng=np.random.default_rng()):
