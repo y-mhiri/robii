@@ -63,8 +63,8 @@ class Imager():
         wgt = np.repeat(wgt.reshape(-1,2, 1), ms.nb_chan, axis=-1)
 
         if corr_type == 'RR-LL':
-            # stokeI_vis = (vis[:, :, 0]*wgt[:,0] + vis[:, :, 1]*wgt[:,1])/2
-            stokeI_vis  = (vis[:, :, 0] + vis[:, :, 1])/2
+            stokeI_vis = (vis[:, :, 0]*wgt[:,0] + vis[:, :, 1]*wgt[:,1])/2
+            # stokeI_vis  = (vis[:, :, 0] + vis[:, :, 1])/2
 
 
         stokeI_vis = stokeI_vis[ms.data_desc_id == spw_id]
