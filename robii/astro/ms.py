@@ -59,6 +59,17 @@ class MS:
         # Informations relatifs à la fréquence d'acquisition
         t_freq = tb.table(mainTable.getkeyword('SPECTRAL_WINDOW'), readonly=True, ack=False)
 
+        # Informations relatives aux directions d'observation
+        t_field = tb.table(mainTable.getkeyword('FIELD'), readonly=True, ack=False)
+        direction = t_field.getcol('PHASE_DIR')
+
+        phase_dir = direction[0,0,:]
+        # convert to degrees
+        phase_dir = np.rad2deg(phase_dir)
+
+        print("Direction of observation :", phase_dir)
+
+
         ref_freq   = t_freq.getcol('REF_FREQUENCY') # [0] should depend on the spectral window ID (ici on ne travail que sur une seule) 
         orig_freq = t_freq.getcol('CHAN_FREQ')
         chan_freq = orig_freq
@@ -104,7 +115,7 @@ class MS:
         self.freq_mean      = freq_mean
         self.chan_wavelength= chan_wavelength
         self.nb_chan        = nb_chan
-        
+        self.phase_dir      = phase_dir
 
     def readMSInfo(self):
         
